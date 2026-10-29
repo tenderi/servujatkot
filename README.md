@@ -1,7 +1,7 @@
 # servujatkot
 
-Casting tools for community esports broadcasts, in one binary with no install
-step. It currently does Dota 2:
+Casting tools for community esports broadcasts, in one binary. It currently
+does Dota 2, on Linux:
 
 - **Casting config**: an up-to-date take on the old *pimpcasting* observer config.
   Settings live in [`configs/dota/casting.toml`](configs/dota/casting.toml) and
@@ -13,43 +13,53 @@ step. It currently does Dota 2:
 
 Counter-Strike and other games are planned; see [docs/DESIGN.md](docs/DESIGN.md).
 
-## Casting config
+## Install into Dota 2 (Linux)
 
 ```sh
-# Writes servujatkot_cast.cfg and servujatkot_play.cfg, and prints the autoexec lines
-servujatkot dota cfg --out "C:\Program Files (x86)\Steam\steamapps\common\dota 2 beta\game\dota\cfg"
+servujatkot dota install --dry-run   # show what it would write
+servujatkot dota install             # do it, after confirming
 ```
 
-Paste the printed lines into `autoexec.cfg` in the same folder. Then **F11**
-loads the casting setup and **F9** goes back to playing (change these with
-`--cast-key` and `--play-key`). F12 is avoided because Steam uses it for
-screenshots. If the autoexec doesn't run, add `+exec autoexec` to Dota's launch
-options.
+It searches your Steam libraries for `dota 2 beta`. That covers native, Flatpak
+and Snap Steam, plus every library in `libraryfolders.vdf`. It then **asks you
+to confirm the folder it found**, or to pick one if there are several. Next it
+lists every file it will write and asks once more. Pass `--dota-dir` to name the
+folder yourself; `--yes` skips the prompts and only works together with
+`--dota-dir`.
 
-Review the `play` values in the TOML first: they're what you get back when you
-switch to playing, so they should match how you play. To edit the config, copy
-the TOML, change it, and pass `--config yours.toml`.
+It writes:
 
-**Checking it against the current client.** Add `-condebug` to the launch
-options, start Dota, press F11, and quit. Then:
+- `game/dota/cfg/servujatkot_cast.cfg` and `servujatkot_play.cfg`
+- `game/dota/cfg/gamestate_integration/gamestate_integration_servujatkot.cfg`
+- a marked block in `autoexec.cfg` that binds **F11** to casting and **F9** to
+  playing (`--cast-key` / `--play-key` to change them). The rest of the file is
+  left alone. A copy of the original goes to `autoexec.cfg.servujatkot-backup`
+  the first time. If `autoexec.cfg` is a symlink, the file it points to is
+  edited in place and the link stays; the install output names that file.
 
-```sh
-servujatkot dota lint-log ".../dota 2 beta/game/dota/console.log"
-```
+It warns if your autoexec already binds the same keys. `servujatkot dota uninstall`
+removes everything above. Restart Dota after either.
 
-This lists every command the client reported as unknown or cheat-protected.
-Remove or fix those in the TOML, and set `checked = "<date>"` on the settings
-that worked.
+Review the `play` values in [`configs/dota/casting.toml`](configs/dota/casting.toml)
+first: they're what you get back when you switch to playing. To change the
+config, copy the TOML, edit it, and pass `--config yours.toml`.
+`servujatkot dota cfg [--play]` prints a generated cfg without installing it.
 
-**Camera hotkeys** (`dota_camera_set_lookatpos`) for runes, Roshan and
-similar spots are in the TOML but have no coordinates yet. The map has moved
-too much since the old configs. Give each one a `pos` and a `key` to turn it on.
+**Checking it against the current client.** Add `-condebug` to Dota's launch
+options, start Dota, press F11, and quit. Then run `servujatkot dota lint-log`.
+It reads `console.log` from the same Dota folder and lists every command the
+client reported as unknown or cheat-protected. Fix or remove those in the TOML,
+and set `checked = "<date>"` on the settings that worked.
+
+**Camera hotkeys** (`dota_camera_set_lookatpos`) for runes, Roshan and similar
+spots are in the TOML but have no coordinates yet. The map has moved too much
+since the old configs. Give each one a `pos` and a `key` to turn it on.
 
 ## Draft overlay
 
 ```sh
-# 1. Tell Dota where to send game state (restart Dota afterwards)
-servujatkot dota gsi-install --dota-dir ".../dota 2 beta" --token SOME-SECRET
+# 1. Install (once) with a token; restart Dota afterwards
+servujatkot dota install --token SOME-SECRET
 
 # 2. Run the server on the casting PC
 servujatkot serve --token SOME-SECRET
@@ -68,7 +78,7 @@ Valve's CDN, so the OBS machine needs internet access.
 cargo build --release
 ```
 
-Windows and Linux binaries: run the *Build release binaries* workflow
+Linux (and, untested, Windows) binaries: run the *Build release binaries* workflow
 (`gh workflow run release.yml`) and download the artifacts.
 
 Hero data comes from [odota/dotaconstants](https://github.com/odota/dotaconstants) (MIT); see `data/dota/NOTICE`.

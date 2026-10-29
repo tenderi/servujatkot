@@ -6,9 +6,6 @@
 //! spectating it includes every player and the `draft` block; while playing,
 //! only your own hero.
 
-use std::path::{Path, PathBuf};
-
-use anyhow::{Context, Result};
 use serde_json::Value;
 
 use super::heroes::{self, Hero};
@@ -48,27 +45,6 @@ pub fn install_cfg(uri: &str, token: Option<&str>) -> String {
     }
     out += "    }\n}\n";
     out
-}
-
-/// `<dota>/game/dota/cfg/gamestate_integration/`, given the install directory
-/// (the one called `dota 2 beta`).
-pub fn cfg_dir(dota_dir: &Path) -> PathBuf {
-    dota_dir.join("game/dota/cfg/gamestate_integration")
-}
-
-/// Writes the GSI cfg into the Dota install and returns its path.
-pub fn install(dota_dir: &Path, uri: &str, token: Option<&str>) -> Result<PathBuf> {
-    anyhow::ensure!(
-        dota_dir.join("game/dota").is_dir(),
-        "{} does not look like a Dota 2 install (no game/dota inside); pass the `dota 2 beta` directory",
-        dota_dir.display()
-    );
-    let dir = cfg_dir(dota_dir);
-    std::fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
-    let path = dir.join(CFG_NAME);
-    std::fs::write(&path, install_cfg(uri, token))
-        .with_context(|| format!("writing {}", path.display()))?;
-    Ok(path)
 }
 
 pub fn auth_token(payload: &Value) -> Option<&str> {

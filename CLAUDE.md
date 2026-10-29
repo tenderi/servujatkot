@@ -6,5 +6,6 @@ Casting tools (Dota 2 first, CS later). One Rust binary: CLI + axum server for G
 - The casting config lives in `configs/dota/casting.toml`, not in .cfg files. Set `checked` only from a real `dota lint-log` run.
 - `data/dota/sample_draft.json` is hand-written, not captured. Don't treat its field names as confirmed.
 - The original pimpcasting repo has no license; don't copy text from it.
-- No Dota client on the dev workstation (Linux, `tuuletin`). In-game behaviour has to be verified by the user.
+- Dota 2 **is** installed on the dev workstation (`~/.local/share/Steam/steamapps/common/dota 2 beta`), and its `cfg/autoexec.cfg` is a symlink into the user's own `~/bazecor/pimpcasting/`. Never write there without the user's go-ahead: use `dota install --dry-run --dota-dir …` to check. Only the user can run the game.
+- The installer must never assume a folder: discovered Dota dirs are always confirmed interactively. `--yes` requires an explicit `--dota-dir`.
 - Before committing: `cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test` (CI runs the same).

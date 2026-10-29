@@ -2,10 +2,10 @@
 
 ## Shape
 
-One Rust binary that runs on the casting PC (usually Windows):
+One Rust binary that runs on the casting PC. Linux is the target for now; the code avoids Linux-only assumptions outside `dota/install.rs`.
 
 - **CLI subcommands per game** (`servujatkot dota …`, later `servujatkot cs …`)
-  for one-off jobs: generating configs, installing the GSI cfg, linting logs.
+  for one-off jobs: installing configs and the GSI cfg into the game, linting logs.
 - **`serve`**: an axum HTTP server on `127.0.0.1:3000`. It accepts game-state
   POSTs from the game client and serves the overlays as OBS browser sources,
   plus a `/control` page for the operator.
@@ -38,6 +38,17 @@ Known gaps, as of 2026-10-29:
   Tormentor and Lotus locations have all moved since 2020.
 - `lint-log`'s regexes for "unknown command" and cheat-protected lines are
   guesses at Source 2's wording. Fix them against a real `console.log`.
+
+### Installer
+
+`dota/install.rs` searches the Steam roots (native, `~/.steam` links, Flatpak,
+Snap) and every library in `libraryfolders.vdf`, deduplicating by canonical
+path. It **never picks a folder silently**: a discovered folder is shown for
+confirmation, and if there are several the user chooses. Work is computed as a
+`Plan` first, so `--dry-run` prints it and the user approves it before
+anything is written. The autoexec change is a marker-delimited block, so it's
+idempotent and uninstall removes exactly that. Writes happen in place rather
+than by temp-file-and-rename, so a symlinked `autoexec.cfg` stays a symlink.
 
 ### Game State Integration
 
