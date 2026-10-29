@@ -1,0 +1,65 @@
+:root {
+  --radiant: #4caf50;
+  --dire: #e53935;
+  --panel: rgba(12, 14, 18, 0.88);
+  --text: #f2f2f2;
+  --muted: #8a8f98;
+  --slot: rgba(255, 255, 255, 0.06);
+  font-family: "Segoe UI", "Noto Sans", system-ui, sans-serif;
+}
+
+/* ---- overlays: transparent page, 1920x1080 browser source ---- */
+
+body.overlay { margin: 0; background: transparent; color: var(--text); overflow: hidden; }
+
+.draft {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: 1fr 220px 1fr; gap: 12px;
+  padding: 16px 24px; background: var(--panel);
+  transition: transform 0.4s ease;
+}
+.draft.idle { transform: translateY(100%); padding: 0; }
+
+.team header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.team .name { font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.team .reserve { font-size: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.team.radiant .name { color: var(--radiant); }
+.team.dire .name { color: var(--dire); }
+.team.dire header { flex-direction: row-reverse; }
+.team.dire .picks, .team.dire .bans { flex-direction: row-reverse; }
+.team.active .reserve { color: var(--text); }
+
+.picks, .bans { display: flex; gap: 6px; }
+.bans { margin-top: 6px; }
+
+.slot { position: relative; background: var(--slot); border-radius: 4px; overflow: hidden; }
+.slot.pick { width: 156px; height: 88px; }
+.slot.ban { width: 72px; height: 40px; }
+.slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.slot.ban.filled img { filter: grayscale(1) brightness(0.6); }
+.slot.ban.filled::after {
+  content: ""; position: absolute; left: -10%; top: 50%; width: 120%; height: 3px;
+  background: var(--dire); transform: rotate(-20deg);
+}
+.slot .label {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px;
+  font-size: 14px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+}
+.slot.filled { animation: pop 0.35s ease-out; }
+@keyframes pop { from { transform: scale(1.15); opacity: 0; } }
+
+.clock { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.clock .phase { font-size: 20px; text-transform: uppercase; letter-spacing: 0.08em; }
+.clock .phase.radiant { color: var(--radiant); }
+.clock .phase.dire { color: var(--dire); }
+.clock .time { font-size: 56px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---- control page ---- */
+
+body.control { background: #15171c; color: var(--text); max-width: 720px; margin: 2rem auto; padding: 0 16px; }
+body.control a { color: #8ab4ff; }
+body.control dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
+body.control dt { color: var(--muted); }
+body.control dd { margin: 0; }
+body.control .warn { color: var(--dire); }
+body.control form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }

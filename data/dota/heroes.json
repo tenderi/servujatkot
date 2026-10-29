@@ -1,0 +1,764 @@
+[
+{
+"id": 1,
+"class": "antimage",
+"name": "Anti-Mage",
+"attr": "agi"
+},
+{
+"id": 2,
+"class": "axe",
+"name": "Axe",
+"attr": "str"
+},
+{
+"id": 3,
+"class": "bane",
+"name": "Bane",
+"attr": "all"
+},
+{
+"id": 4,
+"class": "bloodseeker",
+"name": "Bloodseeker",
+"attr": "agi"
+},
+{
+"id": 5,
+"class": "crystal_maiden",
+"name": "Crystal Maiden",
+"attr": "int"
+},
+{
+"id": 6,
+"class": "drow_ranger",
+"name": "Drow Ranger",
+"attr": "agi"
+},
+{
+"id": 7,
+"class": "earthshaker",
+"name": "Earthshaker",
+"attr": "str"
+},
+{
+"id": 8,
+"class": "juggernaut",
+"name": "Juggernaut",
+"attr": "agi"
+},
+{
+"id": 9,
+"class": "mirana",
+"name": "Mirana",
+"attr": "agi"
+},
+{
+"id": 10,
+"class": "morphling",
+"name": "Morphling",
+"attr": "agi"
+},
+{
+"id": 11,
+"class": "nevermore",
+"name": "Shadow Fiend",
+"attr": "agi"
+},
+{
+"id": 12,
+"class": "phantom_lancer",
+"name": "Phantom Lancer",
+"attr": "agi"
+},
+{
+"id": 13,
+"class": "puck",
+"name": "Puck",
+"attr": "int"
+},
+{
+"id": 14,
+"class": "pudge",
+"name": "Pudge",
+"attr": "str"
+},
+{
+"id": 15,
+"class": "razor",
+"name": "Razor",
+"attr": "agi"
+},
+{
+"id": 16,
+"class": "sand_king",
+"name": "Sand King",
+"attr": "all"
+},
+{
+"id": 17,
+"class": "storm_spirit",
+"name": "Storm Spirit",
+"attr": "int"
+},
+{
+"id": 18,
+"class": "sven",
+"name": "Sven",
+"attr": "str"
+},
+{
+"id": 19,
+"class": "tiny",
+"name": "Tiny",
+"attr": "str"
+},
+{
+"id": 20,
+"class": "vengefulspirit",
+"name": "Vengeful Spirit",
+"attr": "agi"
+},
+{
+"id": 21,
+"class": "windrunner",
+"name": "Windranger",
+"attr": "all"
+},
+{
+"id": 22,
+"class": "zuus",
+"name": "Zeus",
+"attr": "int"
+},
+{
+"id": 23,
+"class": "kunkka",
+"name": "Kunkka",
+"attr": "str"
+},
+{
+"id": 25,
+"class": "lina",
+"name": "Lina",
+"attr": "int"
+},
+{
+"id": 26,
+"class": "lion",
+"name": "Lion",
+"attr": "int"
+},
+{
+"id": 27,
+"class": "shadow_shaman",
+"name": "Shadow Shaman",
+"attr": "int"
+},
+{
+"id": 28,
+"class": "slardar",
+"name": "Slardar",
+"attr": "str"
+},
+{
+"id": 29,
+"class": "tidehunter",
+"name": "Tidehunter",
+"attr": "str"
+},
+{
+"id": 30,
+"class": "witch_doctor",
+"name": "Witch Doctor",
+"attr": "int"
+},
+{
+"id": 31,
+"class": "lich",
+"name": "Lich",
+"attr": "int"
+},
+{
+"id": 32,
+"class": "riki",
+"name": "Riki",
+"attr": "agi"
+},
+{
+"id": 33,
+"class": "enigma",
+"name": "Enigma",
+"attr": "all"
+},
+{
+"id": 34,
+"class": "tinker",
+"name": "Tinker",
+"attr": "int"
+},
+{
+"id": 35,
+"class": "sniper",
+"name": "Sniper",
+"attr": "agi"
+},
+{
+"id": 36,
+"class": "necrolyte",
+"name": "Necrophos",
+"attr": "int"
+},
+{
+"id": 37,
+"class": "warlock",
+"name": "Warlock",
+"attr": "int"
+},
+{
+"id": 38,
+"class": "beastmaster",
+"name": "Beastmaster",
+"attr": "all"
+},
+{
+"id": 39,
+"class": "queenofpain",
+"name": "Queen of Pain",
+"attr": "int"
+},
+{
+"id": 40,
+"class": "venomancer",
+"name": "Venomancer",
+"attr": "all"
+},
+{
+"id": 41,
+"class": "faceless_void",
+"name": "Faceless Void",
+"attr": "agi"
+},
+{
+"id": 42,
+"class": "skeleton_king",
+"name": "Wraith King",
+"attr": "str"
+},
+{
+"id": 43,
+"class": "death_prophet",
+"name": "Death Prophet",
+"attr": "all"
+},
+{
+"id": 44,
+"class": "phantom_assassin",
+"name": "Phantom Assassin",
+"attr": "agi"
+},
+{
+"id": 45,
+"class": "pugna",
+"name": "Pugna",
+"attr": "int"
+},
+{
+"id": 46,
+"class": "templar_assassin",
+"name": "Templar Assassin",
+"attr": "agi"
+},
+{
+"id": 47,
+"class": "viper",
+"name": "Viper",
+"attr": "agi"
+},
+{
+"id": 48,
+"class": "luna",
+"name": "Luna",
+"attr": "agi"
+},
+{
+"id": 49,
+"class": "dragon_knight",
+"name": "Dragon Knight",
+"attr": "str"
+},
+{
+"id": 50,
+"class": "dazzle",
+"name": "Dazzle",
+"attr": "all"
+},
+{
+"id": 51,
+"class": "rattletrap",
+"name": "Clockwerk",
+"attr": "str"
+},
+{
+"id": 52,
+"class": "leshrac",
+"name": "Leshrac",
+"attr": "int"
+},
+{
+"id": 53,
+"class": "furion",
+"name": "Nature's Prophet",
+"attr": "all"
+},
+{
+"id": 54,
+"class": "life_stealer",
+"name": "Lifestealer",
+"attr": "str"
+},
+{
+"id": 55,
+"class": "dark_seer",
+"name": "Dark Seer",
+"attr": "int"
+},
+{
+"id": 56,
+"class": "clinkz",
+"name": "Clinkz",
+"attr": "agi"
+},
+{
+"id": 57,
+"class": "omniknight",
+"name": "Omniknight",
+"attr": "str"
+},
+{
+"id": 58,
+"class": "enchantress",
+"name": "Enchantress",
+"attr": "int"
+},
+{
+"id": 59,
+"class": "huskar",
+"name": "Huskar",
+"attr": "str"
+},
+{
+"id": 60,
+"class": "night_stalker",
+"name": "Night Stalker",
+"attr": "str"
+},
+{
+"id": 61,
+"class": "broodmother",
+"name": "Broodmother",
+"attr": "agi"
+},
+{
+"id": 62,
+"class": "bounty_hunter",
+"name": "Bounty Hunter",
+"attr": "agi"
+},
+{
+"id": 63,
+"class": "weaver",
+"name": "Weaver",
+"attr": "agi"
+},
+{
+"id": 64,
+"class": "jakiro",
+"name": "Jakiro",
+"attr": "int"
+},
+{
+"id": 65,
+"class": "batrider",
+"name": "Batrider",
+"attr": "all"
+},
+{
+"id": 66,
+"class": "chen",
+"name": "Chen",
+"attr": "int"
+},
+{
+"id": 67,
+"class": "spectre",
+"name": "Spectre",
+"attr": "agi"
+},
+{
+"id": 68,
+"class": "ancient_apparition",
+"name": "Ancient Apparition",
+"attr": "int"
+},
+{
+"id": 69,
+"class": "doom_bringer",
+"name": "Doom",
+"attr": "str"
+},
+{
+"id": 70,
+"class": "ursa",
+"name": "Ursa",
+"attr": "agi"
+},
+{
+"id": 71,
+"class": "spirit_breaker",
+"name": "Spirit Breaker",
+"attr": "str"
+},
+{
+"id": 72,
+"class": "gyrocopter",
+"name": "Gyrocopter",
+"attr": "agi"
+},
+{
+"id": 73,
+"class": "alchemist",
+"name": "Alchemist",
+"attr": "str"
+},
+{
+"id": 74,
+"class": "invoker",
+"name": "Invoker",
+"attr": "int"
+},
+{
+"id": 75,
+"class": "silencer",
+"name": "Silencer",
+"attr": "int"
+},
+{
+"id": 76,
+"class": "obsidian_destroyer",
+"name": "Outworld Devourer",
+"attr": "int"
+},
+{
+"id": 77,
+"class": "lycan",
+"name": "Lycan",
+"attr": "str"
+},
+{
+"id": 78,
+"class": "brewmaster",
+"name": "Brewmaster",
+"attr": "all"
+},
+{
+"id": 79,
+"class": "shadow_demon",
+"name": "Shadow Demon",
+"attr": "int"
+},
+{
+"id": 80,
+"class": "lone_druid",
+"name": "Lone Druid",
+"attr": "agi"
+},
+{
+"id": 81,
+"class": "chaos_knight",
+"name": "Chaos Knight",
+"attr": "str"
+},
+{
+"id": 82,
+"class": "meepo",
+"name": "Meepo",
+"attr": "agi"
+},
+{
+"id": 83,
+"class": "treant",
+"name": "Treant Protector",
+"attr": "str"
+},
+{
+"id": 84,
+"class": "ogre_magi",
+"name": "Ogre Magi",
+"attr": "str"
+},
+{
+"id": 85,
+"class": "undying",
+"name": "Undying",
+"attr": "str"
+},
+{
+"id": 86,
+"class": "rubick",
+"name": "Rubick",
+"attr": "int"
+},
+{
+"id": 87,
+"class": "disruptor",
+"name": "Disruptor",
+"attr": "int"
+},
+{
+"id": 88,
+"class": "nyx_assassin",
+"name": "Nyx Assassin",
+"attr": "all"
+},
+{
+"id": 89,
+"class": "naga_siren",
+"name": "Naga Siren",
+"attr": "agi"
+},
+{
+"id": 90,
+"class": "keeper_of_the_light",
+"name": "Keeper of the Light",
+"attr": "int"
+},
+{
+"id": 91,
+"class": "wisp",
+"name": "Io",
+"attr": "all"
+},
+{
+"id": 92,
+"class": "visage",
+"name": "Visage",
+"attr": "all"
+},
+{
+"id": 93,
+"class": "slark",
+"name": "Slark",
+"attr": "agi"
+},
+{
+"id": 94,
+"class": "medusa",
+"name": "Medusa",
+"attr": "agi"
+},
+{
+"id": 95,
+"class": "troll_warlord",
+"name": "Troll Warlord",
+"attr": "agi"
+},
+{
+"id": 96,
+"class": "centaur",
+"name": "Centaur Warrunner",
+"attr": "str"
+},
+{
+"id": 97,
+"class": "magnataur",
+"name": "Magnus",
+"attr": "all"
+},
+{
+"id": 98,
+"class": "shredder",
+"name": "Timbersaw",
+"attr": "str"
+},
+{
+"id": 99,
+"class": "bristleback",
+"name": "Bristleback",
+"attr": "str"
+},
+{
+"id": 100,
+"class": "tusk",
+"name": "Tusk",
+"attr": "str"
+},
+{
+"id": 101,
+"class": "skywrath_mage",
+"name": "Skywrath Mage",
+"attr": "int"
+},
+{
+"id": 102,
+"class": "abaddon",
+"name": "Abaddon",
+"attr": "all"
+},
+{
+"id": 103,
+"class": "elder_titan",
+"name": "Elder Titan",
+"attr": "str"
+},
+{
+"id": 104,
+"class": "legion_commander",
+"name": "Legion Commander",
+"attr": "str"
+},
+{
+"id": 105,
+"class": "techies",
+"name": "Techies",
+"attr": "all"
+},
+{
+"id": 106,
+"class": "ember_spirit",
+"name": "Ember Spirit",
+"attr": "agi"
+},
+{
+"id": 107,
+"class": "earth_spirit",
+"name": "Earth Spirit",
+"attr": "str"
+},
+{
+"id": 108,
+"class": "abyssal_underlord",
+"name": "Underlord",
+"attr": "str"
+},
+{
+"id": 109,
+"class": "terrorblade",
+"name": "Terrorblade",
+"attr": "agi"
+},
+{
+"id": 110,
+"class": "phoenix",
+"name": "Phoenix",
+"attr": "str"
+},
+{
+"id": 111,
+"class": "oracle",
+"name": "Oracle",
+"attr": "int"
+},
+{
+"id": 112,
+"class": "winter_wyvern",
+"name": "Winter Wyvern",
+"attr": "int"
+},
+{
+"id": 113,
+"class": "arc_warden",
+"name": "Arc Warden",
+"attr": "all"
+},
+{
+"id": 114,
+"class": "monkey_king",
+"name": "Monkey King",
+"attr": "agi"
+},
+{
+"id": 119,
+"class": "dark_willow",
+"name": "Dark Willow",
+"attr": "int"
+},
+{
+"id": 120,
+"class": "pangolier",
+"name": "Pangolier",
+"attr": "all"
+},
+{
+"id": 121,
+"class": "grimstroke",
+"name": "Grimstroke",
+"attr": "int"
+},
+{
+"id": 123,
+"class": "hoodwink",
+"name": "Hoodwink",
+"attr": "agi"
+},
+{
+"id": 126,
+"class": "void_spirit",
+"name": "Void Spirit",
+"attr": "all"
+},
+{
+"id": 128,
+"class": "snapfire",
+"name": "Snapfire",
+"attr": "all"
+},
+{
+"id": 129,
+"class": "mars",
+"name": "Mars",
+"attr": "str"
+},
+{
+"id": 131,
+"class": "ringmaster",
+"name": "Ring Master",
+"attr": "int"
+},
+{
+"id": 135,
+"class": "dawnbreaker",
+"name": "Dawnbreaker",
+"attr": "str"
+},
+{
+"id": 136,
+"class": "marci",
+"name": "Marci",
+"attr": "all"
+},
+{
+"id": 137,
+"class": "primal_beast",
+"name": "Primal Beast",
+"attr": "str"
+},
+{
+"id": 138,
+"class": "muerta",
+"name": "Muerta",
+"attr": "int"
+},
+{
+"id": 145,
+"class": "kez",
+"name": "Kez",
+"attr": "agi"
+},
+{
+"id": 155,
+"class": "largo",
+"name": "Largo",
+"attr": "str"
+}
+]

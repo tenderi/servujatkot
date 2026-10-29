@@ -1,0 +1,29 @@
+{
+  "provider": { "name": "Dota 2", "appid": 570, "version": 47, "timestamp": 1761750000 },
+  "map": { "name": "start", "matchid": "0", "game_time": 0, "clock_time": 0, "game_state": "DOTA_GAMERULES_STATE_HERO_SELECTION" },
+  "draft": {
+    "activeteam": 3,
+    "pick": true,
+    "activeteam_time_remaining": 17,
+    "radiant_bonus_time": 112,
+    "dire_bonus_time": 96,
+    "team2": {
+      "home_team": true,
+      "pick0_id": 1, "pick0_class": "antimage",
+      "pick1_id": 0, "pick1_class": "nevermore",
+      "pick2_id": 0, "pick2_class": "",
+      "pick3_id": 0, "pick3_class": "",
+      "pick4_id": 0, "pick4_class": ""
+    },
+    "team3": {
+      "home_team": false,
+      "pick0_id": 0, "pick0_class": "",
+      "pick1_id": 0, "pick1_class": "",
+      "pick2_id": 0, "pick2_class": "",
+      "pick3_id": 0, "pick3_class": "",
+      "pick4_id": 0, "pick4_class": "",
+      "ban0_id": 14, "ban0_class": "pudge"
+    }
+  },
+  "auth": { "token": "test-token" }
+}

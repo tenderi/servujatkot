@@ -1,0 +1,283 @@
+//! Dota 2 console configs: the TOML source in `configs/dota/casting.toml`
+//! rendered into `servujatkot_cast.cfg` / `servujatkot_play.cfg`, plus a
+//! checker for the console log the game writes with `-condebug`.
+
+use std::collections::BTreeSet;
+use std::fmt::Write as _;
+use std::sync::LazyLock;
+
+use anyhow::{Context, Result};
+use regex::Regex;
+use serde::Deserialize;
+
+/// The config shipped with the binary, so `dota cfg` works without a checkout.
+pub const DEFAULT_TOML: &str = include_str!("../../configs/dota/casting.toml");
+
+pub const CAST_FILE: &str = "servujatkot_cast.cfg";
+pub const PLAY_FILE: &str = "servujatkot_play.cfg";
+
+#[derive(Debug, Deserialize)]
+pub struct CastingConfig {
+    #[serde(default)]
+    pub meta: Meta,
+    #[serde(default, rename = "setting")]
+    pub settings: Vec<Setting>,
+    #[serde(default, rename = "bind")]
+    pub binds: Vec<Bind>,
+    #[serde(default, rename = "spot")]
+    pub spots: Vec<Spot>,
+    #[serde(default)]
+    pub extra: Extra,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Meta {
+    #[serde(default)]
+    pub patch: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Setting {
+    pub key: String,
+    pub cast: String,
+    pub play: Option<String>,
+    #[serde(default = "yes")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub note: String,
+    #[serde(default)]
+    pub checked: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Bind {
+    pub key: String,
+    pub cast: String,
+    pub play: Option<String>,
+    #[serde(default)]
+    pub note: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Spot {
+    pub name: String,
+    #[serde(default)]
+    pub key: String,
+    pub pos: Option<[f64; 2]>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Extra {
+    #[serde(default)]
+    pub cast: String,
+    #[serde(default)]
+    pub play: String,
+}
+
+fn yes() -> bool {
+    true
+}
+
+impl CastingConfig {
+    pub fn parse(src: &str) -> Result<Self> {
+        toml::from_str(src).context("parsing casting config TOML")
+    }
+
+    /// Settings never confirmed in a live client (empty `checked`).
+    pub fn unchecked(&self) -> usize {
+        self.settings
+            .iter()
+            .filter(|s| s.checked.is_empty())
+            .count()
+    }
+
+    /// Every console command the cast cfg will run, for matching log lines.
+    pub fn keys(&self) -> BTreeSet<&str> {
+        self.settings.iter().map(|s| s.key.as_str()).collect()
+    }
+
+    pub fn render_cast(&self) -> String {
+        let mut out = header(CAST_FILE, &self.meta);
+        for s in &self.settings {
+            note(&mut out, &s.note);
+            let off = if s.enabled { "" } else { "// " };
+            let _ = writeln!(out, "{off}{} \"{}\"", s.key, s.cast);
+        }
+        out.push('\n');
+        push_extra(&mut out, &self.extra.cast);
+        for b in &self.binds {
+            note(&mut out, &b.note);
+            let _ = writeln!(out, "bind \"{}\" \"{}\"", b.key, b.cast);
+        }
+        for spot in &self.spots {
+            if let (Some([x, y]), false) = (spot.pos, spot.key.is_empty()) {
+                let _ = writeln!(out, "// {}", spot.name);
+                let _ = writeln!(
+                    out,
+                    "bind \"{}\" \"dota_camera_set_lookatpos {x} {y}\"",
+                    spot.key
+                );
+            }
+        }
+        let _ = writeln!(out, "\necholn \"servujatkot: cast config loaded\"");
+        out
+    }
+
+    pub fn render_play(&self) -> String {
+        let mut out = header(PLAY_FILE, &self.meta);
+        for s in self.settings.iter().filter(|s| s.enabled) {
+            if let Some(play) = &s.play {
+                let _ = writeln!(out, "{} \"{play}\"", s.key);
+            }
+        }
+        out.push('\n');
+        push_extra(&mut out, &self.extra.play);
+        for b in &self.binds {
+            match &b.play {
+                Some(cmd) => writeln!(out, "bind \"{}\" \"{cmd}\"", b.key),
+                None => writeln!(out, "unbind \"{}\"", b.key),
+            }
+            .ok();
+        }
+        // Spot binds exist only while casting.
+        for spot in self
+            .spots
+            .iter()
+            .filter(|s| s.pos.is_some() && !s.key.is_empty())
+        {
+            let _ = writeln!(out, "unbind \"{}\"", spot.key);
+        }
+        let _ = writeln!(out, "\necholn \"servujatkot: play config loaded\"");
+        out
+    }
+}
+
+/// Lines to add to `autoexec.cfg` to switch between the two configs.
+pub fn autoexec_snippet(cast_key: &str, play_key: &str) -> String {
+    format!(
+        "// servujatkot: switch between casting and playing\n\
+         bind \"{cast_key}\" \"exec servujatkot_cast\"\n\
+         bind \"{play_key}\" \"exec servujatkot_play\"\n\
+         exec servujatkot_play\n"
+    )
+}
+
+fn header(file: &str, meta: &Meta) -> String {
+    let mut out = format!(
+        "// {file} - generated by servujatkot from configs/dota/casting.toml.\n\
+         // Edit the TOML and regenerate rather than editing this file.\n"
+    );
+    if !meta.patch.is_empty() {
+        let _ = writeln!(out, "// Checked against Dota 2 patch {}.", meta.patch);
+    }
+    out.push('\n');
+    out
+}
+
+fn note(out: &mut String, note: &str) {
+    for line in note.lines() {
+        let _ = writeln!(out, "// {line}");
+    }
+}
+
+fn push_extra(out: &mut String, extra: &str) {
+    if !extra.trim().is_empty() {
+        out.push_str(extra.trim());
+        out.push_str("\n\n");
+    }
+}
+
+/// What the console log says about the commands a config runs.
+#[derive(Debug, Default, PartialEq)]
+pub struct LintReport {
+    /// Commands the client did not recognise.
+    pub unknown: BTreeSet<String>,
+    /// Commands the client refused because they are cheat-protected.
+    pub cheat: BTreeSet<String>,
+}
+
+static UNKNOWN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)unknown command[\s:'"]+([A-Za-z0-9_+\-]+)"#).unwrap());
+static CHEAT: LazyLock<Regex> = LazyLock::new(|| {
+    // The wording differs between engine versions, so key off "cheat" and
+    // take the first identifier-looking token that is a known setting.
+    Regex::new(r"(?i)cheat").unwrap()
+});
+static WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[A-Za-z_][A-Za-z0-9_]{3,}").unwrap());
+
+/// Scan a `-condebug` console log. Unknown commands are reported whatever
+/// they are; cheat-protection lines only when they name one of `keys`.
+pub fn lint_log(log: &str, keys: &BTreeSet<&str>) -> LintReport {
+    let mut report = LintReport::default();
+    for line in log.lines() {
+        if let Some(c) = UNKNOWN.captures(line) {
+            report.unknown.insert(c[1].to_string());
+        } else if CHEAT.is_match(line)
+            && let Some(k) = WORD
+                .find_iter(line)
+                .map(|m| m.as_str())
+                .find(|w| keys.contains(w))
+        {
+            report.cheat.insert(k.to_string());
+        }
+    }
+    report
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_config_parses_and_renders() {
+        let cfg = CastingConfig::parse(DEFAULT_TOML).unwrap();
+        let cast = cfg.render_cast();
+        assert!(cast.contains("dota_camera_speed \"3000\""));
+        assert!(
+            cast.contains("// dota_silent_roshan \"1\""),
+            "disabled settings are commented out"
+        );
+        assert!(cast.contains("bind \"MOUSE4\" \"dota_toggle_assisted_camera_operator\""));
+        assert!(
+            !cast.contains("lookatpos"),
+            "uncalibrated spots are not rendered"
+        );
+
+        let play = cfg.render_play();
+        assert!(play.contains("dota_camera_speed \"6000\""));
+        assert!(play.contains("unbind \"SHIFT\""));
+        assert!(!play.contains("dota_silent_roshan"));
+    }
+
+    #[test]
+    fn calibrated_spot_is_bound_and_unbound() {
+        let cfg = CastingConfig::parse(
+            "[[spot]]\nname = \"Top rune\"\nkey = \"k\"\npos = [-1600.0, 1100.5]\n",
+        )
+        .unwrap();
+        assert!(
+            cfg.render_cast()
+                .contains("bind \"k\" \"dota_camera_set_lookatpos -1600 1100.5\"")
+        );
+        assert!(cfg.render_play().contains("unbind \"k\""));
+    }
+
+    #[test]
+    fn lint_finds_unknown_and_cheat_lines() {
+        let keys = BTreeSet::from(["dota_camera_speed", "fog_enable"]);
+        let log = "\
+            Unknown command \"dota_spec_talentchanges_show\"\n\
+            unknown command: dota_old_thing\n\
+            Can't change replicated ConVar fog_enable from console of client, only server operator can change its value (cheat)\n\
+            servujatkot: cast config loaded\n";
+        let r = lint_log(log, &keys);
+        assert_eq!(
+            r.unknown,
+            BTreeSet::from([
+                "dota_spec_talentchanges_show".into(),
+                "dota_old_thing".into()
+            ])
+        );
+        assert_eq!(r.cheat, BTreeSet::from(["fog_enable".into()]));
+    }
+}

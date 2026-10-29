@@ -1,0 +1,257 @@
+# Source for the Dota 2 casting/observing configs.
+#
+# `servujatkot dota cfg` renders this into:
+#   servujatkot_cast.cfg  - observing/casting values (exec it before going live)
+#   servujatkot_play.cfg  - your playing values for the same settings (exec it to go back)
+#   autoexec snippet      - binds that switch between the two
+#
+# Every setting has `checked`: the date it was last confirmed to exist and be
+# settable in the live client (not cheat-protected), or "" if never. Confirm by
+# running the game with `-condebug`, exec'ing the cast cfg, and feeding
+# console.log to `servujatkot dota lint-log`. Anything it reports goes here.
+
+[meta]
+# Client version / patch the `checked` dates refer to.
+patch = ""
+
+# ---------------------------------------------------------------- performance
+
+[[setting]]
+key = "fps_max"
+cast = "0"
+play = "240"
+note = "Uncapped while casting; cap frames with in-game VSync instead for even frame pacing."
+checked = ""
+
+[[setting]]
+key = "engine_no_focus_sleep"
+cast = "0"
+play = "50"
+note = "Keep full frame rate when OBS or another window has focus."
+checked = ""
+
+[[setting]]
+key = "mic_listen_while_nonfocused"
+cast = "1"
+play = "0"
+note = "Voice keeps working while alt-tabbed to OBS or the production chat."
+checked = ""
+
+# --------------------------------------------------------------------- camera
+
+[[setting]]
+key = "dota_camera_speed"
+cast = "3000"
+play = "6000"
+note = "Slow, readable pans. The settings slider allows 2000-8000."
+checked = ""
+
+[[setting]]
+key = "dota_camera_accelerate"
+cast = "5"
+play = "50"
+note = "Ease into pans instead of snapping to full speed."
+checked = ""
+
+[[setting]]
+key = "dota_camera_edgemove"
+cast = "0"
+play = "1"
+note = "Screen-edge scrolling makes the camera lurch whenever the mouse goes near the edge."
+checked = ""
+
+[[setting]]
+key = "dota_mouse_window_lock"
+cast = "0"
+play = "1"
+note = "Let the cursor leave the game window; set 1 if you cast on a single monitor."
+checked = ""
+
+[[setting]]
+key = "dota_camera_zoom_return_to_default_time_spectator_enabled"
+cast = "0"
+note = "Stop the spectator camera from zooming back in on its own."
+checked = ""
+
+[[setting]]
+key = "dota_camera_disable_zoom"
+cast = "false"
+play = "true"
+note = "Mouse wheel zoom is a casting tool, not a playing one."
+checked = ""
+
+[[setting]]
+key = "dota_camera_mousewheel_direction_multiplier"
+cast = "0.0025"
+note = "Zoom per wheel notch. Try 0.005-0.0075 if zooming feels sluggish."
+checked = ""
+
+[[setting]]
+key = "dota_camera_broadcaster_mousewheel_direction_multiplier"
+cast = "0.0025"
+note = "Same as above, for broadcaster slots in a lobby."
+checked = ""
+
+[[setting]]
+key = "dota_camera_broadcaster_mousewheel_frametime_multiplier"
+cast = "3"
+checked = ""
+
+[[setting]]
+key = "dota_camera_mousewheel_start_delay"
+cast = "0.1"
+checked = ""
+
+[[setting]]
+key = "dota_camera_mousewheel_delay_reset_interval"
+cast = "0"
+checked = ""
+
+[[setting]]
+key = "dota_camera_hold_select_to_follow"
+cast = "1"
+note = "Holding the follow bind (SPACE below) locks onto the selected hero. Does nothing while assisted camera is on."
+checked = ""
+
+# -------------------------------------------------------------------- minimap
+
+[[setting]]
+key = "dota_minimap_always_draw_hero_icons"
+cast = "0"
+play = "1"
+checked = ""
+
+[[setting]]
+key = "dota_minimap_hero_size"
+cast = "750"
+play = "700"
+checked = ""
+
+[[setting]]
+key = "dota_minimap_rune_size"
+cast = "500"
+play = "700"
+checked = ""
+
+[[setting]]
+key = "dota_minimap_hero_scalar"
+cast = "1"
+play = "1"
+note = "Minimap icons shrink when heroes are close together. 0 turns that off."
+checked = ""
+
+[[setting]]
+key = "dota_minimap_hero_scalar_distance"
+cast = "5"
+play = "20"
+checked = ""
+
+[[setting]]
+key = "dota_minimap_hero_scalar_minimum"
+cast = "500"
+play = "600"
+checked = ""
+
+[[setting]]
+key = "dota_alt_shows_neutral_spawn_boxes"
+cast = "1"
+play = "1"
+checked = ""
+
+# ------------------------------------------------------------------------ HUD
+
+[[setting]]
+key = "dota_fight_recap_terse"
+cast = "1"
+note = "Fight recap without item and treads noise."
+checked = ""
+
+[[setting]]
+key = "dota_hud_netgraph"
+cast = "0"
+play = "1"
+note = "Toggled with F10 below to check for server lag."
+checked = ""
+
+[[setting]]
+key = "dota_spec_talentchanges_show"
+cast = "0"
+note = "Hide the big talent pop-ups."
+checked = ""
+
+# ------------------------------------------------------------------ LAN / stage
+
+[[setting]]
+key = "dota_silent_roshan"
+cast = "1"
+enabled = false
+note = "Mutes Roshan and smoke sounds. For live-audience events only."
+checked = ""
+
+[[setting]]
+key = "dota_minimap_draw_cocaster_camera"
+cast = "0"
+enabled = false
+note = "Hide the co-caster's camera outline on the minimap."
+checked = ""
+
+# ---------------------------------------------------------------------- binds
+# `cast` is bound by the cast cfg, `play` by the play cfg. A bind with no
+# `play` value is unbound when you switch back to playing.
+
+[[bind]]
+key = "MOUSE4"
+cast = "dota_toggle_assisted_camera_operator"
+play = "+voicerecord"
+note = "Assisted camera on/off."
+
+[[bind]]
+key = "SHIFT"
+cast = "+servujatkot_assist"
+note = "Assisted camera while held."
+
+[[bind]]
+key = "SPACE"
+cast = "+dota_camera_follow"
+play = "+servujatkot_camhold"
+note = "Follow the selected hero while held."
+
+[[bind]]
+key = "F10"
+cast = "toggle dota_hud_netgraph"
+play = "toggle dota_hud_netgraph"
+
+# ------------------------------------------------------------- camera spots
+# `dota_camera_set_lookatpos X Y` jumps the camera to a world position. The map
+# has changed a lot since the old configs (power runes, Lotus pools, Tormentors,
+# Roshan's day/night pits), so their coordinates are wrong now. Spots without
+# `pos` are not rendered. Calibrate in a lobby and fill in `pos = [x, y]`.
+
+[[spot]]
+name = "Power rune, top river"
+key = ""
+
+[[spot]]
+name = "Power rune, bottom river"
+key = ""
+
+[[spot]]
+name = "Roshan, top pit"
+key = ""
+
+[[spot]]
+name = "Roshan, bottom pit"
+key = ""
+
+# ----------------------------------------------------------- raw extras
+# Aliases that the binds above refer to. Rendered verbatim.
+
+[extra]
+cast = '''
+alias "+servujatkot_assist" "dota_toggle_assisted_camera_operator"
+alias "-servujatkot_assist" "dota_toggle_assisted_camera_operator"
+'''
+play = '''
+alias "+servujatkot_camhold" "dota_camera_lock 1"
+alias "-servujatkot_camhold" "dota_camera_lock 0"
+'''
