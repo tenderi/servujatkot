@@ -1,8 +1,9 @@
 //! HTTP server: receives Game State Integration POSTs and serves the overlays
 //! (OBS browser sources) and a control page for the operator.
 
+use std::collections::HashMap;
 use std::convert::Infallible;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -20,9 +21,41 @@ use tokio_stream::wrappers::BroadcastStream;
 
 use crate::dota::gsi;
 use crate::dota::overlay::{self, MatchInfo, TeamInfo, View};
+use crate::dota::players::{self, HeroStats, OpenDota};
 use crate::record::Recorder;
 
 const SAMPLE_DRAFT: &str = include_str!("../data/dota/sample_draft.json");
+/// OpenDota stats of the sample's players for its drafted heroes (2026-10-30).
+const SAMPLE_PLAYER_HEROES: &str = include_str!("../data/dota/sample_player_heroes.json");
+
+/// A failed lookup is retried after this long.
+const RETRY_AFTER: Duration = Duration::from_secs(60);
+
+enum Lookup {
+    Pending,
+    Found(Arc<HeroStats>),
+    Failed(Instant),
+}
+
+type Stats = HashMap<u64, Lookup>;
+
+fn found(stats: &Stats) -> impl Fn(u64) -> Option<Arc<HeroStats>> + '_ {
+    |id| match stats.get(&id) {
+        Some(Lookup::Found(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn sample_stats() -> Stats {
+    let all: HashMap<String, Value> =
+        serde_json::from_str(SAMPLE_PLAYER_HEROES).expect("sample stats are valid JSON");
+    all.into_iter()
+        .map(|(id, rows)| {
+            let s = players::parse_hero_stats(&rows.to_string()).expect("sample stats parse");
+            (id.parse().expect("account id"), Lookup::Found(Arc::new(s)))
+        })
+        .collect()
+}
 
 pub struct App {
     /// Required in `auth.token` of every GSI POST when set.
@@ -30,6 +63,10 @@ pub struct App {
     live: RwLock<Live>,
     changed: broadcast::Sender<()>,
     recorder: Option<Recorder>,
+    /// `None` = player lookups are off.
+    opendota: Option<OpenDota>,
+    /// Hero history per account id, kept for the life of the server.
+    stats: Mutex<Stats>,
 }
 
 struct Live {
@@ -43,9 +80,24 @@ struct Live {
 }
 
 impl Live {
-    fn match_info(&self) -> MatchInfo {
+    fn match_info(&self, stats: &Stats) -> MatchInfo {
         let league = self.payload.as_ref().and_then(gsi::parse_league);
-        let team = |manual: &Option<String>, side: Option<&gsi::LeagueTeam>, fallback: &str| {
+        let draft = self.payload.as_ref().and_then(gsi::parse_draft);
+        let roster = self.payload.as_ref().and_then(players::parse_roster);
+        let picked_by = |side: gsi::Side| match (&draft, &roster) {
+            (Some(d), Some(r)) => {
+                let (team, picks) = match side {
+                    gsi::Side::Radiant => (&r.radiant, &d.radiant),
+                    gsi::Side::Dire => (&r.dire, &d.dire),
+                };
+                players::picked_by(team, picks, &found(stats))
+            }
+            _ => Vec::new(),
+        };
+        let team = |manual: &Option<String>,
+                    side: Option<&gsi::LeagueTeam>,
+                    fallback: &str,
+                    picked_by: Vec<Option<players::PickedBy>>| {
             let name = manual
                 .clone()
                 .or_else(|| side.map(|t| t.name.clone()).filter(|n| !n.is_empty()))
@@ -58,6 +110,7 @@ impl Live {
                     _ => String::new(),
                 },
                 wins: side.map_or(0, |t| t.series_wins),
+                picked_by,
             }
         };
         MatchInfo {
@@ -65,8 +118,14 @@ impl Live {
                 &self.radiant_name,
                 league.as_ref().map(|l| &l.radiant),
                 "Radiant",
+                picked_by(gsi::Side::Radiant),
             ),
-            dire: team(&self.dire_name, league.as_ref().map(|l| &l.dire), "Dire"),
+            dire: team(
+                &self.dire_name,
+                league.as_ref().map(|l| &l.dire),
+                "Dire",
+                picked_by(gsi::Side::Dire),
+            ),
             event: league
                 .as_ref()
                 .map(|l| l.name.clone())
@@ -77,10 +136,16 @@ impl Live {
 }
 
 impl App {
-    pub fn new(token: Option<String>, recorder: Option<Recorder>) -> Arc<Self> {
+    pub fn new(
+        token: Option<String>,
+        recorder: Option<Recorder>,
+        opendota: Option<OpenDota>,
+    ) -> Arc<Self> {
         Arc::new(App {
             token,
             recorder,
+            opendota,
+            stats: Mutex::new(HashMap::new()),
             live: RwLock::new(Live {
                 payload: None,
                 received: None,
@@ -91,6 +156,43 @@ impl App {
             }),
             changed: broadcast::channel(16).0,
         })
+    }
+
+    /// Starts a background lookup for every player in `payload` we know
+    /// nothing about yet (or whose last lookup failed a while ago). Each
+    /// result re-renders the overlays.
+    fn look_up_players(self: &Arc<Self>, payload: &Value) {
+        let Some(od) = &self.opendota else { return };
+        let Some(roster) = players::parse_roster(payload) else {
+            return;
+        };
+        let mut stats = self.stats.lock().expect("stats lock");
+        for p in roster.all().filter(|p| p.account_id != 0) {
+            let due = match stats.get(&p.account_id) {
+                None => true,
+                Some(Lookup::Failed(at)) => at.elapsed() > RETRY_AFTER,
+                Some(_) => false,
+            };
+            if !due {
+                continue;
+            }
+            stats.insert(p.account_id, Lookup::Pending);
+            let (app, od, id, name) = (self.clone(), od.clone(), p.account_id, p.name.clone());
+            tokio::spawn(async move {
+                let result = match od.hero_stats(id).await {
+                    Ok(s) => {
+                        tracing::info!("{name}: {} heroes in public history", s.len());
+                        Lookup::Found(Arc::new(s))
+                    }
+                    Err(e) => {
+                        tracing::warn!("looking up {name} ({id}) on OpenDota: {e:#}");
+                        Lookup::Failed(Instant::now())
+                    }
+                };
+                app.stats.lock().expect("stats lock").insert(id, result);
+                let _ = app.changed.send(());
+            });
+        }
     }
 }
 
@@ -149,6 +251,7 @@ async fn gsi_dota(State(app): State<Arc<App>>, Json(payload): Json<Value>) -> St
     if let Some(r) = &app.recorder {
         r.offer(&payload);
     }
+    app.look_up_players(&payload);
     live.payload = Some(payload);
     live.received = Some(Instant::now());
     live.packets += 1;
@@ -201,7 +304,8 @@ fn events_url(view: View) -> &'static str {
 async fn render_draft(app: &App, view: View) -> Markup {
     let live = app.live.read().await;
     let draft = live.payload.as_ref().and_then(gsi::parse_draft);
-    view.render(draft.as_ref(), &live.match_info())
+    let info = live.match_info(&app.stats.lock().expect("stats lock"));
+    view.render(draft.as_ref(), &info)
 }
 
 async fn draft_page(State(app): State<Arc<App>>, view: View) -> Markup {
@@ -214,7 +318,8 @@ async fn draft_page(State(app): State<Arc<App>>, view: View) -> Markup {
 }
 
 /// The draft overlay filled from the bundled sample, for lining up OBS
-/// without a live game. Team names typed on /control still apply.
+/// without a live game. Team names typed on /control still apply. Player
+/// stats come from the bundled snapshot, so the demo works offline.
 async fn draft_demo(State(app): State<Arc<App>>, view: View) -> Markup {
     let payload: Value = serde_json::from_str(SAMPLE_DRAFT).expect("sample draft is valid JSON");
     let live = app.live.read().await;
@@ -231,7 +336,7 @@ async fn draft_demo(State(app): State<Arc<App>>, view: View) -> Markup {
         "Draft (demo)",
         view,
         None,
-        view.render(draft.as_ref(), &demo.match_info()),
+        view.render(draft.as_ref(), &demo.match_info(&sample_stats())),
     )
 }
 
@@ -292,6 +397,20 @@ async fn control(State(app): State<Arc<App>>) -> Markup {
         .unwrap_or("-");
     let has_draft = live.payload.as_ref().and_then(gsi::parse_draft).is_some();
     let league = live.payload.as_ref().and_then(gsi::parse_league);
+    let roster = live.payload.as_ref().and_then(players::parse_roster);
+    let stats = app.stats.lock().expect("stats lock");
+    let player_status = |id: u64| -> (String, bool) {
+        if app.opendota.is_none() {
+            return ("lookups off".into(), false);
+        }
+        match stats.get(&id) {
+            _ if id == 0 => ("no account".into(), true),
+            None | Some(Lookup::Pending) => ("looking up…".into(), false),
+            Some(Lookup::Found(s)) if s.is_empty() => ("no public match data".into(), true),
+            Some(Lookup::Found(s)) => (format!("{} heroes played", s.len()), false),
+            Some(Lookup::Failed(_)) => ("lookup failed, retrying".into(), true),
+        }
+    };
     let auto = |side: fn(&gsi::League) -> &gsi::LeagueTeam, fallback: &str| {
         let name = league
             .as_ref()
@@ -337,6 +456,34 @@ async fn control(State(app): State<Arc<App>>) -> Markup {
                             value=(live.dire_name.as_deref().unwrap_or(""))
                             placeholder=(auto(|l| &l.dire, "Dire")); }
                         button { "Save" }
+                    }
+                }
+                section {
+                    h2 { "Players" }
+                    @match &roster {
+                        None => p { "None yet: they appear once you spectate a game." }
+                        Some(r) => {
+                            p { "The overlay guesses who plays each pick from these players' public history on OpenDota. "
+                                "A player with no public data can turn on "
+                                em { "Expose Public Match Data" } " in Dota's settings; it applies to games played after that." }
+                            div.players {
+                                @for (side, team) in [("Radiant", &r.radiant), ("Dire", &r.dire)] {
+                                    div {
+                                        h3 { (side) }
+                                        ul {
+                                            @for pl in team {
+                                                @let (status, warn) = player_status(pl.account_id);
+                                                li {
+                                                    (pl.name) " "
+                                                    @if let Some(h) = pl.hero { "(" (h.name) ") " }
+                                                    span.warn[warn].muted[!warn] { (status) }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 section {
@@ -387,7 +534,7 @@ mod tests {
 
     #[tokio::test]
     async fn gsi_post_feeds_the_draft_overlay() {
-        let app = App::new(Some("test-token".into()), None);
+        let app = App::new(Some("test-token".into()), None, None);
         let (s, page) = send(
             &app,
             Request::get("/dota/draft").body(Body::empty()).unwrap(),
@@ -422,7 +569,7 @@ mod tests {
 
     #[tokio::test]
     async fn wrong_token_is_rejected() {
-        let app = App::new(Some("other".into()), None);
+        let app = App::new(Some("other".into()), None, None);
         let (s, _) = send(&app, post_gsi(SAMPLE_DRAFT)).await;
         assert_eq!(s, StatusCode::UNAUTHORIZED);
         assert!(app.live.read().await.payload.is_none());
@@ -431,7 +578,7 @@ mod tests {
 
     #[tokio::test]
     async fn team_names_show_on_overlay() {
-        let app = App::new(None, None);
+        let app = App::new(None, None, None);
         send(&app, post_gsi(SAMPLE_DRAFT)).await;
         let req = Request::post("/control/teams")
             .header("content-type", "application/x-www-form-urlencoded")

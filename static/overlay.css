@@ -45,6 +45,14 @@ body.overlay { margin: 0; background: transparent; color: var(--text); overflow:
   position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 6px;
   font-size: 14px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
 }
+.slot .player {
+  position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box;
+  padding: 1px 6px; font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: rgba(0, 0, 0, 0.75); border-bottom-right-radius: 4px;
+  animation: pop 0.35s ease-out;
+}
+.slot .player.guess::after { content: "?"; margin-left: 2px; color: var(--muted); }
 .slot.filled { animation: pop 0.35s ease-out; }
 @keyframes pop { from { transform: scale(1.15); opacity: 0; } }
 
@@ -62,4 +70,8 @@ body.control dl { display: grid; grid-template-columns: max-content 1fr; gap: 4p
 body.control dt { color: var(--muted); }
 body.control dd { margin: 0; }
 body.control .warn { color: var(--dire); }
+body.control .muted { color: var(--muted); }
+body.control .players { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+body.control h3 { margin: 0; font-size: 1rem; }
+body.control ul { padding-left: 1.2em; }
 body.control form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }

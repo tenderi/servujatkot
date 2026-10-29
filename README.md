@@ -73,6 +73,15 @@ Leave it running while you cast, then:
    as broadcaster. The control page should show packets arriving and
    `Draft data: yes`, and the bar appears during the draft.
 
+**Who plays each pick.** When a hero is picked, the overlays name the player
+most likely to play it, guessed from each player's last 365 days of public
+games on [OpenDota](https://www.opendota.com) (no account needed). Once the
+player actually takes the hero, the real name replaces the guess. The control
+page lists each player's lookup status. Players with no public data can turn on
+**Expose Public Match Data** in Dota's settings; it counts for games played
+after that. Use `serve --player-days 0` to count all time, or
+`--no-player-stats` to turn lookups off.
+
 To line up the layout without a game, add `/demo` to either path
 (`/dota/draft/demo`, `/dota/draft/full/demo`); it shows a real mid-draft moment.
 Hero portraits load from Valve's CDN, so OBS needs internet access.

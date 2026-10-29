@@ -1,0 +1,292 @@
+{
+"1044002267": [
+{
+"hero_id": 80,
+"games": 13,
+"win": 8
+},
+{
+"hero_id": 36,
+"games": 3,
+"win": 1
+},
+{
+"hero_id": 47,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 59,
+"games": 1,
+"win": 1
+},
+{
+"hero_id": 93,
+"games": 1,
+"win": 1
+}
+],
+"195108598": [
+{
+"hero_id": 28,
+"games": 34,
+"win": 21
+},
+{
+"hero_id": 47,
+"games": 3,
+"win": 2
+},
+{
+"hero_id": 36,
+"games": 1,
+"win": 1
+},
+{
+"hero_id": 105,
+"games": 1,
+"win": 1
+}
+],
+"106573901": [
+{
+"hero_id": 47,
+"games": 15,
+"win": 12
+},
+{
+"hero_id": 28,
+"games": 14,
+"win": 9
+},
+{
+"hero_id": 7,
+"games": 8,
+"win": 5
+},
+{
+"hero_id": 59,
+"games": 5,
+"win": 3
+},
+{
+"hero_id": 93,
+"games": 2,
+"win": 2
+}
+],
+"164199202": [
+{
+"hero_id": 119,
+"games": 32,
+"win": 24
+},
+{
+"hero_id": 105,
+"games": 7,
+"win": 2
+},
+{
+"hero_id": 62,
+"games": 5,
+"win": 4
+},
+{
+"hero_id": 93,
+"games": 5,
+"win": 4
+},
+{
+"hero_id": 59,
+"games": 3,
+"win": 2
+},
+{
+"hero_id": 28,
+"games": 2,
+"win": 1
+},
+{
+"hero_id": 80,
+"games": 1,
+"win": 0
+}
+],
+"73401082": [
+{
+"hero_id": 30,
+"games": 20,
+"win": 15
+},
+{
+"hero_id": 105,
+"games": 17,
+"win": 10
+},
+{
+"hero_id": 121,
+"games": 14,
+"win": 10
+},
+{
+"hero_id": 50,
+"games": 5,
+"win": 3
+},
+{
+"hero_id": 62,
+"games": 1,
+"win": 0
+}
+],
+"171262902": [
+{
+"hero_id": 80,
+"games": 15,
+"win": 8
+},
+{
+"hero_id": 93,
+"games": 3,
+"win": 2
+},
+{
+"hero_id": 36,
+"games": 1,
+"win": 1
+}
+],
+"312436974": [
+{
+"hero_id": 28,
+"games": 26,
+"win": 16
+},
+{
+"hero_id": 47,
+"games": 13,
+"win": 8
+},
+{
+"hero_id": 7,
+"games": 5,
+"win": 4
+},
+{
+"hero_id": 93,
+"games": 4,
+"win": 4
+},
+{
+"hero_id": 36,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 59,
+"games": 1,
+"win": 1
+}
+],
+"183719386": [
+{
+"hero_id": 36,
+"games": 22,
+"win": 12
+},
+{
+"hero_id": 47,
+"games": 15,
+"win": 12
+},
+{
+"hero_id": 59,
+"games": 11,
+"win": 8
+},
+{
+"hero_id": 28,
+"games": 9,
+"win": 4
+},
+{
+"hero_id": 30,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 93,
+"games": 1,
+"win": 1
+}
+],
+"93817671": [
+{
+"hero_id": 30,
+"games": 15,
+"win": 10
+},
+{
+"hero_id": 50,
+"games": 12,
+"win": 8
+},
+{
+"hero_id": 105,
+"games": 12,
+"win": 10
+},
+{
+"hero_id": 121,
+"games": 2,
+"win": 0
+},
+{
+"hero_id": 36,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 119,
+"games": 1,
+"win": 1
+}
+],
+"103735745": [
+{
+"hero_id": 119,
+"games": 15,
+"win": 11
+},
+{
+"hero_id": 62,
+"games": 7,
+"win": 5
+},
+{
+"hero_id": 105,
+"games": 2,
+"win": 2
+},
+{
+"hero_id": 28,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 50,
+"games": 1,
+"win": 1
+},
+{
+"hero_id": 93,
+"games": 1,
+"win": 0
+},
+{
+"hero_id": 121,
+"games": 1,
+"win": 1
+}
+]
+}

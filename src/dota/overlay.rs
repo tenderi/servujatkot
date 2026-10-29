@@ -5,6 +5,7 @@ use maud::{DOCTYPE, Markup, html};
 
 use super::gsi::{Draft, Side, TeamDraft};
 use super::heroes::Hero;
+use super::players::PickedBy;
 
 /// Captains Mode slot counts. The payload may carry fewer.
 const PICKS: usize = 5;
@@ -13,10 +14,21 @@ const BANS: usize = 7;
 /// Seconds left at which the fullscreen timer turns urgent.
 const URGENT: i64 = 5;
 
+/// Games on a hero before its win rate is worth showing.
+const MIN_GAMES_FOR_RATE: u32 = 5;
+
 pub struct TeamInfo {
     pub name: String,
     pub tag: String,
     pub wins: i64,
+    /// Who plays each pick slot, known or guessed; may be shorter than the picks.
+    pub picked_by: Vec<Option<PickedBy>>,
+}
+
+impl TeamInfo {
+    fn by(&self, slot: usize) -> Option<&PickedBy> {
+        self.picked_by.get(slot).and_then(Option::as_ref)
+    }
 }
 
 /// Everything about the match that isn't the draft itself.
@@ -118,17 +130,24 @@ fn bar_team(side: Side, m: &MatchInfo, t: &TeamDraft, d: &Draft, reserve: i64) -
                 span.name { (m.team(side).name) }
                 span.reserve title="Reserve time" { (clock(reserve)) }
             }
-            div.picks { @for h in padded(&t.picks, PICKS) { (bar_slot(h, "pick")) } }
-            div.bans { @for h in padded(&t.bans, BANS) { (bar_slot(h, "ban")) } }
+            div.picks {
+                @for (i, h) in padded(&t.picks, PICKS).into_iter().enumerate() {
+                    (bar_slot(h, "pick", m.team(side).by(i)))
+                }
+            }
+            div.bans { @for h in padded(&t.bans, BANS) { (bar_slot(h, "ban", None)) } }
         }
     }
 }
 
-fn bar_slot(hero: Option<&Hero>, kind: &str) -> Markup {
+fn bar_slot(hero: Option<&Hero>, kind: &str, by: Option<&PickedBy>) -> Markup {
     html! {
         @match hero {
             Some(h) => div.slot.(kind).filled title=(h.name) {
                 img src=(h.portrait_url()) alt=(h.name);
+                @if let Some(b) = by {
+                    span.player.guess[b.record.is_some()] { (b.name) }
+                }
                 @if kind == "pick" { span.label { (h.name) } }
             },
             None => div.slot.(kind).empty {},
@@ -209,7 +228,7 @@ fn full_side(side: Side, m: &MatchInfo, d: Option<&Draft>, still: bool) -> Marku
             }
             div.cards {
                 @for (i, h) in padded(&t.picks, PICKS).into_iter().enumerate() {
-                    (card(h, i, next == Some((true, i)), still))
+                    (card(h, i, next == Some((true, i)), still, info.by(i)))
                 }
             }
             div.ban-row {
@@ -225,7 +244,7 @@ fn full_side(side: Side, m: &MatchInfo, d: Option<&Draft>, still: bool) -> Marku
     }
 }
 
-fn card(hero: Option<&Hero>, i: usize, next: bool, still: bool) -> Markup {
+fn card(hero: Option<&Hero>, i: usize, next: bool, still: bool, by: Option<&PickedBy>) -> Markup {
     html! {
         @match hero {
             Some(h) => div.card.filled data-hero=(h.class) {
@@ -237,11 +256,35 @@ fn card(hero: Option<&Hero>, i: usize, next: bool, still: bool) -> Markup {
                             autoplay muted loop playsinline {}
                     }
                 }
+                @if let Some(b) = by { (played_by(b)) }
                 div.hero-name { (h.name) }
             },
             None => div.card.empty.next[next] {
                 div.slot-no { (i + 1) }
             },
+        }
+    }
+}
+
+/// The callout naming who plays a pick: certain once the player has taken
+/// the hero, otherwise the most likely player and their record on it.
+fn played_by(b: &PickedBy) -> Markup {
+    html! {
+        div.played-by.guess[b.record.is_some()] {
+            @match b.record {
+                Some(r) => {
+                    span.by-hint { "Likely" }
+                    span.by-name { (b.name) }
+                    span.by-stat {
+                        (r.games) @if r.games == 1 { " game" } @else { " games" }
+                        // A win rate over a handful of games says nothing.
+                        @if r.games >= MIN_GAMES_FOR_RATE {
+                            " · " (100 * r.wins / r.games) "%"
+                        }
+                    }
+                }
+                None => span.by-name { (b.name) },
+            }
         }
     }
 }
@@ -309,11 +352,25 @@ mod tests {
                 name: "Rad".into(),
                 tag: "R".into(),
                 wins: 1,
+                picked_by: vec![
+                    None,
+                    Some(PickedBy {
+                        name: "Carry Guy".into(),
+                        record: Some(super::super::players::Record {
+                            games: 26,
+                            wins: 21,
+                        }),
+                    }),
+                ],
             },
             dire: TeamInfo {
                 name: "Dire Co".into(),
                 tag: "".into(),
                 wins: 0,
+                picked_by: vec![Some(PickedBy {
+                    name: "Known".into(),
+                    record: None,
+                })],
             },
             event: Some("Some Cup".into()),
             wins_needed: Some(2),
@@ -359,6 +416,10 @@ mod tests {
         assert!(html.contains("Best of 3"));
         assert_eq!(html.matches("pip won").count(), 1);
         assert!(!html.contains("urgent"));
+        assert!(html.contains("Carry Guy"));
+        assert!(html.contains("26 games · 80%"));
+        assert_eq!(html.matches("played-by guess").count(), 1);
+        assert!(html.contains(r#"<div class="played-by"><span class="by-name">Known</span>"#));
 
         let still = View::Full { still: true }
             .render(Some(&sample()), &info())

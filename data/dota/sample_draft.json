@@ -118,6 +118,88 @@
       "pick4_id": 0
     }
   },
+  "player": {
+    "team2": {
+      "player0": {
+        "name": "Satanic",
+        "accountid": "1044002267"
+      },
+      "player1": {
+        "name": "Noticed",
+        "accountid": "195108598"
+      },
+      "player2": {
+        "name": "No[o]ne-",
+        "accountid": "106573901"
+      },
+      "player3": {
+        "name": "9Class",
+        "accountid": "164199202"
+      },
+      "player4": {
+        "name": "Dukalis",
+        "accountid": "73401082"
+      }
+    },
+    "team3": {
+      "player5": {
+        "name": "医者watson`",
+        "accountid": "171262902"
+      },
+      "player6": {
+        "name": "CHIRA_JUNIOR",
+        "accountid": "312436974"
+      },
+      "player7": {
+        "name": "AMMAR_THE_F",
+        "accountid": "183719386"
+      },
+      "player8": {
+        "name": "Maladych",
+        "accountid": "93817671"
+      },
+      "player9": {
+        "name": "Saksa",
+        "accountid": "103735745"
+      }
+    }
+  },
+  "hero": {
+    "team2": {
+      "player0": {
+        "id": 0
+      },
+      "player1": {
+        "id": 0
+      },
+      "player2": {
+        "id": 0
+      },
+      "player3": {
+        "id": 0
+      },
+      "player4": {
+        "id": 0
+      }
+    },
+    "team3": {
+      "player5": {
+        "id": 0
+      },
+      "player6": {
+        "id": 0
+      },
+      "player7": {
+        "id": 0
+      },
+      "player8": {
+        "id": 0
+      },
+      "player9": {
+        "id": 0
+      }
+    }
+  },
   "auth": {
     "token": "test-token"
   }

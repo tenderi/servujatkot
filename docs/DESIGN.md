@@ -15,8 +15,8 @@ Live updates use Server-Sent Events: on each GSI packet the server re-renders
 the overlay fragment and pushes it, and a five-line `static/overlay.js` swaps it
 in. CSS and JS are compiled into the binary.
 
-State is in memory only: the last GSI payload and the team names. Nothing needs
-to survive a restart yet.
+State is in memory only: the last GSI payload, the team names and the player
+lookups. Nothing needs to survive a restart yet.
 
 ## Dota 2
 
@@ -96,6 +96,25 @@ Each view (`overlay::View`) renders the same data: `Bar` is the lower third,
 animated hero renders (WebM with alpha, ~3–5 MB each, square 1440 px) and
 falls back to the PNG renders with `?still=1`. Names typed on `/control`
 override the league data; an empty field goes back to it.
+
+### Who plays each pick
+
+`dota/players.rs`. While spectating, GSI's `player` block has all ten players'
+`name` and `accountid` from the draft onward (confirmed 2026-10-30). Their
+`hero.<team>.<playerN>.id` stays 0 until they take a hero after the draft; once
+it's set, that's the answer. Until then the server guesses. On the first packet
+naming a player, it fetches `api.opendota.com/api/players/{id}/heroes?date=365`
+in the background (10 calls a match, cached for the server's life, failures
+retried after a minute; OpenDota's free tier allows 60 a minute and rejects
+requests with no user agent). The guess gives each player at most one hero and
+picks the assignment with the most total games on the drafted heroes.
+Heroes nobody has played get no name, and the win rate shows from 5 games up.
+
+For amateur games this depends on players exposing public match data; without
+it OpenDota has their matches but not their account. Unverified: the moment
+`hero.id` gets set (the capture ends mid-draft), and whether OpenDota counts
+private lobby games. `data/dota/sample_player_heroes.json` holds the sample
+players' stats for the drafted heroes, so `/demo` and the tests work offline.
 
 Auth: when `--token` is set, posts whose `auth.token` doesn't match get a 401
 and are counted on `/control`. The server binds to loopback by default.

@@ -34,6 +34,12 @@ enum Cmd {
         /// Append received game state to this file (JSON lines) for later analysis.
         #[arg(long)]
         record: Option<PathBuf>,
+        /// Don't look up players' hero history on OpenDota.
+        #[arg(long)]
+        no_player_stats: bool,
+        /// Count only players' games from the last N days (0 = all time).
+        #[arg(long, default_value_t = 365)]
+        player_days: u32,
     },
     /// Dota 2 tools.
     Dota {
@@ -112,6 +118,8 @@ async fn main() -> Result<()> {
             bind,
             token,
             record,
+            no_player_stats,
+            player_days,
         } => {
             let recorder = record.as_deref().map(record::Recorder::open).transpose()?;
             if let Some(p) = &record {
@@ -124,7 +132,11 @@ async fn main() -> Result<()> {
             if token.is_none() {
                 tracing::warn!("no --token: accepting GSI posts from anyone who can reach {bind}");
             }
-            axum::serve(listener, server::router(server::App::new(token, recorder))).await?;
+            let opendota = (!no_player_stats)
+                .then(|| dota::players::OpenDota::new(player_days))
+                .transpose()?;
+            let app = server::App::new(token, recorder, opendota);
+            axum::serve(listener, server::router(app)).await?;
         }
         Cmd::Dota { cmd } => dota_cmd(cmd)?,
     }
