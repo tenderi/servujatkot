@@ -20,6 +20,7 @@ use tokio_stream::wrappers::BroadcastStream;
 
 use crate::dota::gsi;
 use crate::dota::overlay::{self, Names};
+use crate::record::Recorder;
 
 const SAMPLE_DRAFT: &str = include_str!("../data/dota/sample_draft.json");
 
@@ -28,6 +29,7 @@ pub struct App {
     token: Option<String>,
     live: RwLock<Live>,
     changed: broadcast::Sender<()>,
+    recorder: Option<Recorder>,
 }
 
 struct Live {
@@ -40,9 +42,10 @@ struct Live {
 }
 
 impl App {
-    pub fn new(token: Option<String>) -> Arc<Self> {
+    pub fn new(token: Option<String>, recorder: Option<Recorder>) -> Arc<Self> {
         Arc::new(App {
             token,
+            recorder,
             live: RwLock::new(Live {
                 payload: None,
                 received: None,
@@ -95,6 +98,9 @@ async fn gsi_dota(State(app): State<Arc<App>>, Json(payload): Json<Value>) -> St
     {
         live.rejected += 1;
         return StatusCode::UNAUTHORIZED;
+    }
+    if let Some(r) = &app.recorder {
+        r.offer(&payload);
     }
     live.payload = Some(payload);
     live.received = Some(Instant::now());
@@ -259,7 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn gsi_post_feeds_the_draft_overlay() {
-        let app = App::new(Some("test-token".into()));
+        let app = App::new(Some("test-token".into()), None);
         let (s, page) = send(
             &app,
             Request::get("/dota/draft").body(Body::empty()).unwrap(),
@@ -281,7 +287,7 @@ mod tests {
 
     #[tokio::test]
     async fn wrong_token_is_rejected() {
-        let app = App::new(Some("other".into()));
+        let app = App::new(Some("other".into()), None);
         let (s, _) = send(&app, post_gsi(SAMPLE_DRAFT)).await;
         assert_eq!(s, StatusCode::UNAUTHORIZED);
         assert!(app.live.read().await.payload.is_none());
@@ -290,7 +296,7 @@ mod tests {
 
     #[tokio::test]
     async fn team_names_show_on_overlay() {
-        let app = App::new(None);
+        let app = App::new(None, None);
         send(&app, post_gsi(SAMPLE_DRAFT)).await;
         let req = Request::post("/control/teams")
             .header("content-type", "application/x-www-form-urlencoded")

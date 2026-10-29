@@ -8,7 +8,7 @@ does Dota 2, on Linux:
 - **Draft overlay**: a picks/bans/timer bar for OBS, fed live by Dota 2's Game
   State Integration (GSI) while you spectate.
 
-Counter-Strike and other games are planned; see [docs/DESIGN.md](docs/DESIGN.md).
+Counter-Strike and other games are planned; see [docs/DESIGN.md](docs/DESIGN.md). Testing with a live client: [docs/TESTING.md](docs/TESTING.md).
 
 ## Quick start
 

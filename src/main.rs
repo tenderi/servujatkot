@@ -1,4 +1,5 @@
 mod dota;
+mod record;
 mod server;
 
 use std::collections::BTreeSet;
@@ -30,6 +31,9 @@ enum Cmd {
         /// Require this token in GSI posts (must match `dota install --token`).
         #[arg(long, env = "SERVUJATKOT_TOKEN")]
         token: Option<String>,
+        /// Append received game state to this file (JSON lines) for later analysis.
+        #[arg(long)]
+        record: Option<PathBuf>,
     },
     /// Dota 2 tools.
     Dota {
@@ -104,7 +108,15 @@ async fn main() -> Result<()> {
         .init();
 
     match Cli::parse().cmd {
-        Cmd::Serve { bind, token } => {
+        Cmd::Serve {
+            bind,
+            token,
+            record,
+        } => {
+            let recorder = record.as_deref().map(record::Recorder::open).transpose()?;
+            if let Some(p) = &record {
+                tracing::info!("recording game state to {}", p.display());
+            }
             let listener = tokio::net::TcpListener::bind(bind)
                 .await
                 .with_context(|| format!("binding {bind}"))?;
@@ -112,7 +124,7 @@ async fn main() -> Result<()> {
             if token.is_none() {
                 tracing::warn!("no --token: accepting GSI posts from anyone who can reach {bind}");
             }
-            axum::serve(listener, server::router(server::App::new(token))).await?;
+            axum::serve(listener, server::router(server::App::new(token, recorder))).await?;
         }
         Cmd::Dota { cmd } => dota_cmd(cmd)?,
     }
