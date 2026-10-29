@@ -152,12 +152,23 @@ async fn draft_events(
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     // Render once on connect, then on every change. A lagged receiver only
     // means we skipped intermediate states; rendering the latest is enough.
+    // GSI posts several times a second; most change nothing visible, so a
+    // fragment identical to the last one sent is dropped.
     let changes = BroadcastStream::new(app.changed.subscribe()).map(|_| ());
     let ticks = stream::once(async {}).chain(changes);
-    let events = ticks.then(move |()| {
+    let rendered = ticks.then(move |()| {
         let app = app.clone();
-        async move { Ok(Event::default().data(render_draft(&app).await.into_string())) }
+        async move { render_draft(&app).await.into_string() }
     });
+    let events = rendered
+        .scan(String::new(), |last, html| {
+            let fresh = *last != html;
+            if fresh {
+                last.clone_from(&html);
+            }
+            futures::future::ready(Some(fresh.then_some(html)))
+        })
+        .filter_map(|html| async move { html.map(|h| Ok(Event::default().data(h))) });
     Sse::new(events).keep_alive(KeepAlive::default())
 }
 
