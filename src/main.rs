@@ -38,7 +38,7 @@ enum Cmd {
         #[arg(long)]
         no_player_stats: bool,
         /// Count only players' games from the last N days (0 = all time).
-        #[arg(long, default_value_t = 365)]
+        #[arg(long, default_value_t = 0)]
         player_days: u32,
     },
     /// Dota 2 tools.

@@ -103,8 +103,8 @@ override the league data; an empty field goes back to it.
 `name` and `accountid` from the draft onward (confirmed 2026-10-30). Their
 `hero.<team>.<playerN>.id` stays 0 until they take a hero after the draft; once
 it's set, that's the answer. Until then the server guesses. On the first packet
-naming a player, it fetches `api.opendota.com/api/players/{id}/heroes?date=365`
-in the background (10 calls a match, cached for the server's life, failures
+naming a player, it fetches `api.opendota.com/api/players/{id}/heroes` (all time by
+default; `--player-days N` adds `?date=N`) in the background (10 calls a match, cached for the server's life, failures
 retried after a minute; OpenDota's free tier allows 60 a minute and rejects
 requests with no user agent). The guess gives each player at most one hero and
 picks the assignment with the most total games on the drafted heroes.
