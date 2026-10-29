@@ -153,7 +153,7 @@ fn dota_cmd(cmd: DotaCmd) -> Result<()> {
             let plan = install::plan_install(&dir, saved_dir.as_deref(), &c, &opts)?;
             if run_plan(&plan, dry_run, yes)? {
                 println!(
-                    "\nInstalled into {}.\nRestart Dota 2. In game, {cast_key} loads the casting setup and {play_key} goes back to playing.",
+                    "\nInstalled into {}.\nFor the overlay, add -gamestateintegration to Dota's Steam launch options.\nStart Dota: {cast_key} loads the casting setup, {play_key} puts your settings back.",
                     dir.display()
                 );
             }

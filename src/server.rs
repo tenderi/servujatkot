@@ -230,7 +230,7 @@ async fn control(State(app): State<Arc<App>>) -> Markup {
 
 fn fmt_age(age: Option<Duration>) -> String {
     match age {
-        None => "never — is the GSI cfg installed and Dota restarted?".into(),
+        None => "never: run `servujatkot dota install`, add -gamestateintegration to Dota's launch options, restart Dota, and spectate a game".into(),
         Some(a) => format!("{:.1} s ago", a.as_secs_f32()),
     }
 }
