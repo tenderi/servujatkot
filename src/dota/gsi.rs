@@ -86,6 +86,69 @@ pub struct Draft {
     pub dire: TeamDraft,
 }
 
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LeagueTeam {
+    pub name: String,
+    pub tag: String,
+    pub series_wins: i64,
+}
+
+/// The `league` block, present when spectating a ticketed league match.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct League {
+    pub name: String,
+    /// e.g. `bo3`.
+    pub series_type: String,
+    pub radiant: LeagueTeam,
+    pub dire: LeagueTeam,
+}
+
+impl League {
+    /// Wins needed to take the series, from `boN`.
+    pub fn wins_needed(&self) -> Option<i64> {
+        let n: i64 = self.series_type.strip_prefix("bo")?.parse().ok()?;
+        (n > 1).then_some(n / 2 + 1)
+    }
+}
+
+pub fn parse_league(payload: &Value) -> Option<League> {
+    let l = payload.get("league")?.as_object()?;
+    let s = |v: Option<&Value>, k: &str| {
+        v.and_then(|v| v.get(k))
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim()
+            .to_string()
+    };
+    let team = |side: &str| {
+        let t = l.get(side);
+        LeagueTeam {
+            name: s(t, "name"),
+            tag: s(t, "team_tag"),
+            series_wins: t
+                .and_then(|t| t.get("series_wins"))
+                .and_then(Value::as_i64)
+                .unwrap_or(0),
+        }
+    };
+    let league = League {
+        name: l
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .trim()
+            .to_string(),
+        series_type: l
+            .get("series_type")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+        radiant: team("radiant"),
+        dire: team("dire"),
+    };
+    (!league.name.is_empty() || !league.radiant.name.is_empty()).then_some(league)
+}
+
 /// `map.game_state`, e.g. `DOTA_GAMERULES_STATE_HERO_SELECTION`.
 pub fn game_state(payload: &Value) -> Option<&str> {
     payload.pointer("/map/game_state").and_then(Value::as_str)
@@ -144,6 +207,7 @@ mod tests {
 
     #[test]
     fn parses_spectator_draft() {
+        // A real capture (PARIVISION vs Team Yandex), trimmed; see docs/DESIGN.md.
         let payload: Value = serde_json::from_str(DRAFT).unwrap();
         assert_eq!(
             game_state(&payload),
@@ -153,13 +217,36 @@ mod tests {
         let d = parse_draft(&payload).unwrap();
         assert_eq!(d.active, Some(Side::Dire));
         assert!(d.pick);
-        assert_eq!(d.time_remaining, 17);
+        assert_eq!(d.time_remaining, 21);
+        assert_eq!(d.radiant_reserve, 74);
         assert_eq!(d.radiant.picks.len(), 5);
-        assert_eq!(d.radiant.picks[0].unwrap().name, "Anti-Mage");
-        // id 0 but a class: falls back to the class name
-        assert_eq!(d.radiant.picks[1].unwrap().name, "Shadow Fiend");
+        assert_eq!(d.radiant.picks[0].unwrap().name, "Earthshaker");
+        assert_eq!(d.radiant.picks[1].unwrap().name, "Dark Willow");
         assert!(d.radiant.picks[2].is_none());
-        assert_eq!(d.dire.bans[0].unwrap().name, "Pudge");
+        assert_eq!(d.radiant.bans.len(), 7);
+        assert_eq!(d.radiant.bans[0].unwrap().name, "Bounty Hunter");
+        assert_eq!(d.dire.picks[0].unwrap().name, "Slark");
+        assert_eq!(d.dire.bans[4].unwrap().name, "Techies");
+        assert!(d.dire.bans[5].is_none());
+    }
+
+    #[test]
+    fn parses_league() {
+        let payload: Value = serde_json::from_str(DRAFT).unwrap();
+        let l = parse_league(&payload).unwrap();
+        assert_eq!(l.name, "PARI UNIVERSE by FISSURE");
+        assert_eq!(l.radiant.name, "PARIVISION");
+        assert_eq!(l.dire.tag, "TY");
+        assert_eq!(l.wins_needed(), Some(2));
+        assert!(parse_league(&serde_json::json!({"league": {}})).is_none());
+    }
+
+    #[test]
+    fn hand_written_class_fallback() {
+        // id 0 but a class: falls back to the class name.
+        let payload = serde_json::json!({"draft": {"activeteam": 2, "team2": {"pick0_id": 0, "pick0_class": "nevermore"}}});
+        let d = parse_draft(&payload).unwrap();
+        assert_eq!(d.radiant.picks[0].unwrap().name, "Shadow Fiend");
     }
 
     #[test]

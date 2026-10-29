@@ -40,6 +40,22 @@ pub fn by_class(class: &str) -> Option<&'static Hero> {
 }
 
 impl Hero {
+    /// Full-body animated render (WebM with alpha) from Valve's CDN.
+    pub fn render_video_url(&self) -> String {
+        format!(
+            "https://cdn.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/{}.webm",
+            self.class
+        )
+    }
+
+    /// Still of the same render (transparent PNG); poster and `?still` fallback.
+    pub fn render_image_url(&self) -> String {
+        format!(
+            "https://cdn.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/{}.png",
+            self.class
+        )
+    }
+
     /// Landscape portrait from Valve's CDN.
     pub fn portrait_url(&self) -> String {
         format!(

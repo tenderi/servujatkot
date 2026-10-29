@@ -5,8 +5,9 @@ does Dota 2, on Linux:
 
 - **Casting config**: an up-to-date take on the old *pimpcasting* observer
   config, switched on with F11 and off with F9. F9 puts back your own settings.
-- **Draft overlay**: a picks/bans/timer bar for OBS, fed live by Dota 2's Game
-  State Integration (GSI) while you spectate.
+- **Draft overlays** for OBS, fed live by Dota 2's Game State Integration (GSI)
+  while you spectate: a picks/bans bar over gameplay, and a fullscreen draft
+  scene with animated hero renders.
 
 Counter-Strike and other games are planned; see [docs/DESIGN.md](docs/DESIGN.md). Testing with a live client: [docs/TESTING.md](docs/TESTING.md).
 
@@ -60,15 +61,20 @@ servujatkot serve
 
 Leave it running while you cast, then:
 
-1. Open http://127.0.0.1:3000/control in a browser and enter the team names.
-2. In OBS, add a **Browser** source with URL `http://127.0.0.1:3000/dota/draft`,
-   width 1920 and height 1080. The page is transparent, so put the source above
-   the game capture.
+1. Open http://127.0.0.1:3000/control in a browser. League matches fill in
+   team names, tags and the series score by themselves; type names there to
+   override them.
+2. In OBS, add a **Browser** source, 1920×1080, with one of these URLs:
+   - `http://127.0.0.1:3000/dota/draft`: a bar along the bottom. The page is
+     transparent, so put it above the game capture.
+   - `http://127.0.0.1:3000/dota/draft/full`: a fullscreen draft scene with
+     animated hero art. Add `?still=1` for still images if OBS stutters.
 3. Spectate a Captains Mode game in Dota: a live game in Watch, or a lobby slot
    as broadcaster. The control page should show packets arriving and
    `Draft data: yes`, and the bar appears during the draft.
 
-To line up the layout without a game, use `http://127.0.0.1:3000/dota/draft/demo`.
+To line up the layout without a game, add `/demo` to either path
+(`/dota/draft/demo`, `/dota/draft/full/demo`); it shows a real mid-draft moment.
 Hero portraits load from Valve's CDN, so OBS needs internet access.
 
 ### 6. Check the config against the current client

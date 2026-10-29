@@ -1,0 +1,211 @@
+/* Fullscreen draft scene, 1920x1080. Plain colours instead of color-mix()
+   because OBS's browser source can lag behind current Chromium. */
+
+body.fullscreen { background: #04060a; }
+
+.full {
+  --rad: #2fe08a; --rad-soft: rgba(47, 224, 138, 0.22); --rad-glow: rgba(47, 224, 138, 0.55);
+  --dire: #ff3d47; --dire-soft: rgba(255, 61, 71, 0.22); --dire-glow: rgba(255, 61, 71, 0.55);
+  --ink: #f4f6fb; --dim: #7d8594; --line: rgba(255, 255, 255, 0.08);
+  position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden;
+  display: grid; grid-template-columns: 1fr 340px 1fr; grid-template-rows: 120px 1fr;
+  padding: 0 56px 48px; box-sizing: border-box;
+  color: var(--ink);
+  font-family: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
+}
+.side.radiant, .on-clock.radiant { --c: var(--rad); --c-soft: var(--rad-soft); --c-glow: var(--rad-glow); }
+.side.dire, .on-clock.dire { --c: var(--dire); --c-soft: var(--dire-soft); --c-glow: var(--dire-glow); }
+
+/* ---- backdrop: team glows that swell for the side on the clock ---- */
+
+.backdrop {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 16px),
+    radial-gradient(1400px 900px at 50% 120%, rgba(255, 255, 255, 0.05), transparent 60%),
+    linear-gradient(180deg, #0b0f17, #04060a);
+}
+.backdrop::before, .backdrop::after {
+  content: ""; position: absolute; top: -10%; bottom: -10%; width: 70%;
+  opacity: 0.45; transition: opacity 0.8s ease;
+  animation: drift 9s ease-in-out infinite alternate;
+}
+.backdrop::before { left: -20%; background: radial-gradient(closest-side, var(--rad-soft), transparent); }
+.backdrop::after { right: -20%; background: radial-gradient(closest-side, var(--dire-soft), transparent); animation-delay: -4.5s; }
+.full[data-active="radiant"] .backdrop::before,
+.full[data-active="dire"] .backdrop::after { opacity: 1; }
+@keyframes drift { to { translate: 0 6%; scale: 1.08; } }
+
+.full > :not(.backdrop) { position: relative; z-index: 1; }
+
+/* ---- header ---- */
+
+.event {
+  grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 24px;
+  text-transform: uppercase; letter-spacing: 0.4em; color: var(--dim);
+}
+.event-name { font-size: 26px; font-weight: 700; color: var(--ink); opacity: 0.85; }
+.series {
+  font-size: 18px; font-weight: 700; padding: 4px 14px 4px calc(14px + 0.4em);
+  border: 1px solid var(--line); transform: skewX(-12deg);
+}
+
+/* ---- team sides ---- */
+
+.side { display: flex; flex-direction: column; gap: 22px; align-self: center; }
+.side.dire { align-items: flex-end; }
+
+.team-head { display: flex; align-items: center; gap: 18px; min-height: 80px; }
+.dire .team-head { flex-direction: row-reverse; }
+.tag {
+  font-size: 30px; font-weight: 900; padding: 0 14px; line-height: 44px;
+  background: var(--c); color: #04060a; transform: skewX(-12deg);
+}
+.team-name {
+  font-size: 76px; font-weight: 900; line-height: 0.9; text-transform: uppercase;
+  text-shadow: 0 0 34px var(--c-glow); white-space: nowrap;
+}
+.team-name.long { font-size: 54px; }
+.full:not(.idle) .side:not(.active) .team-name { opacity: 0.55; text-shadow: none; transition: opacity 0.5s; }
+.pips { display: flex; gap: 8px; }
+.pip { width: 26px; height: 9px; background: rgba(255, 255, 255, 0.14); transform: skewX(-20deg); }
+.pip.won { background: var(--c); box-shadow: 0 0 14px var(--c); }
+
+/* ---- pick cards ---- */
+
+.cards { display: flex; gap: 12px; }
+.dire .cards, .dire .ban-row { flex-direction: row-reverse; }
+
+.card {
+  --skew: -6deg;
+  position: relative; width: 126px; height: 540px; overflow: hidden;
+  transform: skewX(var(--skew));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015));
+  border: 1px solid var(--line);
+}
+.dire .card, .dire .ban { --skew: 6deg; }
+/* Content is skewed back upright; the art is wider than the card so the
+   slanted edges never show a gap. */
+.card .art { position: absolute; inset: 0 -80px; transform: skewX(calc(var(--skew) * -1)); }
+.art video, .art img {
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%;
+  scale: 1.25; transform-origin: 50% 35%;
+}
+.card.filled { animation: reveal 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.card.filled::before {
+  /* team-coloured floor light behind the hero */
+  content: ""; position: absolute; inset: 40% -40px 0; z-index: 0;
+  background: radial-gradient(60% 70% at 50% 100%, var(--c-glow), transparent 70%);
+}
+.card .art { z-index: 1; }
+.card.filled::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 150px; z-index: 2;
+  background: linear-gradient(transparent, rgba(4, 6, 10, 0.95) 70%);
+  border-bottom: 6px solid var(--c);
+}
+.hero-name {
+  position: absolute; left: -10px; right: -10px; bottom: 16px; z-index: 3;
+  transform: skewX(calc(var(--skew) * -1));
+  text-align: center; font-size: 23px; font-weight: 800; line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-transform: uppercase; letter-spacing: 0.02em;
+  text-shadow: 0 2px 10px #000;
+}
+@keyframes reveal {
+  0% { clip-path: inset(100% 0 0 0); filter: brightness(3) saturate(0); }
+  60% { filter: brightness(1.6); }
+  100% { clip-path: inset(0); filter: none; }
+}
+
+.slot-no {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  transform: skewX(calc(var(--skew) * -1));
+  font-size: 130px; font-weight: 900; color: rgba(255, 255, 255, 0.05);
+}
+
+/* the slot about to be filled */
+.card.next, .ban.next {
+  border-color: var(--c);
+  background: repeating-linear-gradient(-60deg, var(--c-soft) 0 10px, transparent 10px 22px);
+  background-size: 200% 100%;
+  animation: pulse 1.2s ease-in-out infinite, stripes 1.5s linear infinite;
+}
+.card.next .slot-no { color: var(--c); opacity: 0.6; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--c), 0 0 26px -6px var(--c); }
+  50% { box-shadow: 0 0 0 2px var(--c), 0 0 70px 6px var(--c-glow); }
+}
+@keyframes stripes { to { background-position: 44px 0; } }
+
+/* ---- bans ---- */
+
+.ban-row { display: flex; gap: 8px; align-items: center; }
+.ban-label {
+  width: 54px; font-size: 15px; font-weight: 700; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--dim);
+}
+.dire .ban-label { text-align: right; }
+.ban {
+  --skew: -6deg;
+  position: relative; width: 76px; height: 46px; overflow: hidden;
+  transform: skewX(var(--skew));
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+}
+.ban img {
+  width: 130%; height: 100%; margin-left: -15%; object-fit: cover;
+  transform: skewX(calc(var(--skew) * -1));
+  filter: grayscale(1) contrast(1.1) brightness(0.55);
+}
+.ban.filled::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(to top right,
+    transparent calc(50% - 2px), var(--dire) calc(50% - 2px),
+    var(--dire) calc(50% + 2px), transparent calc(50% + 2px));
+}
+.ban.filled { animation: stamp 0.45s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes stamp { from { scale: 1.6; opacity: 0; } }
+
+.reserve {
+  font-size: 22px; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase;
+  color: var(--dim);
+}
+.reserve b { margin-left: 12px; color: var(--ink); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.side.active .reserve b { color: var(--c); }
+
+/* ---- centre column ---- */
+
+.center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center;
+}
+.phase-word {
+  position: absolute; top: 50%; left: 50%; translate: -50% -50%; z-index: -1;
+  font-size: 250px; font-weight: 900; text-transform: uppercase; line-height: 1;
+  color: transparent; -webkit-text-stroke: 2px rgba(255, 255, 255, 0.05);
+  white-space: nowrap; pointer-events: none;
+}
+.on-clock { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.who {
+  font-size: 30px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--c); max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.what {
+  font-size: 70px; font-weight: 900; line-height: 1; text-transform: uppercase;
+  letter-spacing: 0.3em; padding-left: 0.3em;
+}
+.timer {
+  font-size: 190px; font-weight: 800; line-height: 0.9; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 44px rgba(255, 255, 255, 0.22);
+}
+.full.urgent .timer {
+  color: var(--dire); text-shadow: 0 0 60px var(--dire-glow);
+  animation: throb 0.5s ease-in-out infinite alternate;
+}
+@keyframes throb { to { scale: 1.07; } }
+.step { font-size: 22px; font-weight: 700; letter-spacing: 0.35em; text-transform: uppercase; color: var(--dim); }
+
+.versus {
+  font-size: 230px; font-weight: 900; line-height: 1;
+  color: transparent; -webkit-text-stroke: 3px var(--ink);
+  text-shadow: 0 0 60px rgba(255, 255, 255, 0.15);
+}

@@ -77,16 +77,25 @@ broadcaster slot, or a replay) it includes every player and a `draft` block.
 While playing, it includes only your own hero, so overlays need a spectator
 client.
 
-Draft fields (from the Dota2GSI library; not yet seen in a real capture):
-`activeteam` (2 = Radiant, 3 = Dire), `pick` (bool), `activeteam_time_remaining`,
+Draft fields, confirmed by a capture on 2026-10-29: `activeteam` (2 = Radiant,
+3 = Dire, 0 before the draft starts), `pick` (bool), `activeteam_time_remaining`,
 `radiant_bonus_time`, `dire_bonus_time`, and `team2` / `team3`, each holding
-`home_team` and `pickN_id` / `pickN_class`. Bans are parsed from `banN_id` /
-`banN_class` **in case** the client sends them. If it doesn't, bans need a
-manual input on `/control` (planned).
+`home_team`, `pickN_id` / `pickN_class` (N = 0–4) and `banN_id` / `banN_class`
+(N = 0–6). The capture came from a replay, so replays work for testing. League
+matches also carry a `league` block with the event `name`, `series_type`
+(`bo3`), and `radiant` / `dire` objects (`name`, `team_tag`, `series_wins`).
 
-`data/dota/sample_draft.json` is **hand-written** from those field names. It
-powers the tests and `/dota/draft/demo`. Replace it with a real capture
-(`/api/dota/state` during a Captains Mode draft) as soon as there is one.
+`data/dota/sample_draft.json` is a trimmed real capture (PARIVISION vs Team
+Yandex, mid-draft) with a test `auth` token added. It powers the tests and the
+`/demo` pages.
+
+### Overlays
+
+Each view (`overlay::View`) renders the same data: `Bar` is the lower third,
+`Full` the 1920×1080 scene (`static/draft-full.css`). The scene uses Valve's
+animated hero renders (WebM with alpha, ~3–5 MB each, square 1440 px) and
+falls back to the PNG renders with `?still=1`. Names typed on `/control`
+override the league data; an empty field goes back to it.
 
 Auth: when `--token` is set, posts whose `auth.token` doesn't match get a 401
 and are counted on `/control`. The server binds to loopback by default.
