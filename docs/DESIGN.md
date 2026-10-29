@@ -50,6 +50,25 @@ anything is written. The autoexec change is a marker-delimited block, so it's
 idempotent and uninstall removes exactly that. Writes happen in place rather
 than by temp-file-and-rename, so a symlinked `autoexec.cfg` stays a symlink.
 
+### Restoring the player's settings
+
+Dota writes every non-default convar and console bind to
+`<Steam>/userdata/<account>/570/local/cfg/` (`user_convars_0_slot0.vcfg`,
+`machine_convars.vcfg`, `user_keys_0_slot0.vcfg`, all KeyValues) on exit, so
+whatever the cast cfg sets persists. Restoring files alone is therefore not
+enough. `dota/saved.rs` parses those files. On the first install it records
+the current value of every convar and key we touch into
+`servujatkot_snapshot.json`, and only ever adds to it, because later runs
+may see casting values. The play cfg is rendered from the snapshot. Uninstall
+compares the saved files against it and refuses while they differ. We never
+write Dota's own files: they're Steam Cloud-synced. Both commands refuse to
+run while a `dota2` process exists.
+
+Open gap: a convar absent from the saved files is at its default, which we
+can't read. It falls back to casting.toml's `play`, or stays unrestorable.
+Typing a convar's name in the console prints its default, so `lint-log` could
+learn the defaults from a `-condebug` log. That would close the gap.
+
 ### Game State Integration
 
 The client reads `game/dota/cfg/gamestate_integration/gamestate_integration_*.cfg`

@@ -10,6 +10,8 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use serde::Deserialize;
 
+use super::saved::Snapshot;
+
 /// The config shipped with the binary, so `dota cfg` works without a checkout.
 pub const DEFAULT_TOML: &str = include_str!("../../configs/dota/casting.toml");
 
@@ -123,29 +125,52 @@ impl CastingConfig {
         out
     }
 
-    pub fn render_play(&self) -> String {
+    /// Keys of the camera-spot binds that are actually rendered.
+    pub fn spot_keys(&self) -> impl Iterator<Item = &str> {
+        self.spots
+            .iter()
+            .filter(|s| s.pos.is_some() && !s.key.is_empty())
+            .map(|s| s.key.as_str())
+    }
+
+    /// The play cfg: puts back what `snap` recorded. Anything the snapshot
+    /// lacks (e.g. a preview with an empty one) falls back to the TOML's
+    /// `play` values.
+    pub fn render_play(&self, snap: &Snapshot) -> String {
         let mut out = header(PLAY_FILE, &self.meta);
+        out += "// Restores the values you had before servujatkot's first install.\n\n";
         for s in self.settings.iter().filter(|s| s.enabled) {
-            if let Some(play) = &s.play {
-                let _ = writeln!(out, "{} \"{play}\"", s.key);
-            }
-        }
-        out.push('\n');
-        push_extra(&mut out, &self.extra.play);
-        for b in &self.binds {
-            match &b.play {
-                Some(cmd) => writeln!(out, "bind \"{}\" \"{cmd}\"", b.key),
-                None => writeln!(out, "unbind \"{}\"", b.key),
+            let restore = match snap.convars.get(&s.key) {
+                Some(e) => e.restore.clone(),
+                None => s.play.clone(),
+            };
+            match restore {
+                Some(v) => writeln!(out, "{} \"{v}\"", s.key),
+                None => writeln!(
+                    out,
+                    "// {}: no saved value and no `play` fallback; stays at the casting value",
+                    s.key
+                ),
             }
             .ok();
         }
-        // Spot binds exist only while casting.
-        for spot in self
-            .spots
+        out.push('\n');
+        push_extra(&mut out, &self.extra.play);
+        let binds = self
+            .binds
             .iter()
-            .filter(|s| s.pos.is_some() && !s.key.is_empty())
-        {
-            let _ = writeln!(out, "unbind \"{}\"", spot.key);
+            .map(|b| (b.key.as_str(), b.play.as_deref()))
+            .chain(self.spot_keys().map(|k| (k, None)));
+        for (key, fallback) in binds {
+            let cmd = match snap.binds.get(&key.to_uppercase()) {
+                Some(c) => c.as_deref(),
+                None => fallback,
+            };
+            match cmd {
+                Some(cmd) => writeln!(out, "bind \"{key}\" \"{cmd}\""),
+                None => writeln!(out, "unbind \"{key}\""),
+            }
+            .ok();
         }
         let _ = writeln!(out, "\necholn \"servujatkot: play config loaded\"");
         out
@@ -233,7 +258,7 @@ mod tests {
             "uncalibrated spots are not rendered"
         );
 
-        let play = cfg.render_play();
+        let play = cfg.render_play(&Snapshot::default());
         assert!(play.contains("dota_camera_speed \"6000\""));
         assert!(play.contains("unbind \"SHIFT\""));
         assert!(!play.contains("dota_silent_roshan"));
@@ -249,7 +274,10 @@ mod tests {
             cfg.render_cast()
                 .contains("bind \"k\" \"dota_camera_set_lookatpos -1600 1100.5\"")
         );
-        assert!(cfg.render_play().contains("unbind \"k\""));
+        assert!(
+            cfg.render_play(&Snapshot::default())
+                .contains("unbind \"k\"")
+        );
     }
 
     #[test]

@@ -73,6 +73,9 @@ enum DotaCmd {
         /// Don't ask for confirmation (requires --dota-dir).
         #[arg(long, short)]
         yes: bool,
+        /// Uninstall even though Dota still has casting settings saved.
+        #[arg(long)]
+        force: bool,
     },
     /// Print the generated casting config (or the playing one) without installing.
     Cfg {
@@ -137,6 +140,7 @@ fn dota_cmd(cmd: DotaCmd) -> Result<()> {
             dry_run,
             yes,
         } => {
+            ensure_dota_closed()?;
             let dir = pick_dota_dir(dota_dir, yes)?;
             let c = load_config(config.as_ref())?;
             let opts = install::InstallOpts {
@@ -145,7 +149,8 @@ fn dota_cmd(cmd: DotaCmd) -> Result<()> {
                 gsi_uri: &uri,
                 token: token.as_deref(),
             };
-            let plan = install::plan_install(&dir, &c, &opts)?;
+            let saved_dir = pick_saved_dir();
+            let plan = install::plan_install(&dir, saved_dir.as_deref(), &c, &opts)?;
             if run_plan(&plan, dry_run, yes)? {
                 println!(
                     "\nInstalled into {}.\nRestart Dota 2. In game, {cast_key} loads the casting setup and {play_key} goes back to playing.",
@@ -157,10 +162,13 @@ fn dota_cmd(cmd: DotaCmd) -> Result<()> {
             dota_dir,
             dry_run,
             yes,
+            force,
         } => {
+            ensure_dota_closed()?;
             let dir = pick_dota_dir(dota_dir, yes)?;
-            let plan = install::plan_uninstall(&dir)?;
-            if plan.writes.is_empty() && plan.removes.is_empty() {
+            let saved_dir = pick_saved_dir();
+            let plan = install::plan_uninstall(&dir, saved_dir.as_deref(), force)?;
+            if plan.is_empty() {
                 println!("Nothing of ours in {}.", dir.display());
                 return Ok(());
             }
@@ -173,7 +181,7 @@ fn dota_cmd(cmd: DotaCmd) -> Result<()> {
             print!(
                 "{}",
                 if play {
-                    c.render_play()
+                    c.render_play(&dota::saved::Snapshot::default())
                 } else {
                     c.render_cast()
                 }
@@ -214,7 +222,18 @@ fn run_plan(plan: &install::Plan, dry_run: bool, yes: bool) -> Result<bool> {
         return Ok(false);
     }
     plan.apply()?;
+    for a in &plan.after {
+        println!("\n{a}");
+    }
     Ok(true)
+}
+
+/// Dota's saved-settings directory, newest first. Shown in the plan the user
+/// confirms, so no separate prompt.
+fn pick_saved_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")?;
+    let roots = install::steam_roots(std::path::Path::new(&home));
+    dota::saved::find_saved_dirs(&roots).into_iter().next()
 }
 
 /// The Dota folder to use. An explicit --dota-dir is taken as is; a
@@ -244,6 +263,15 @@ fn pick_dota_dir(given: Option<PathBuf>, yes: bool) -> Result<PathBuf> {
         Ok(n) if (1..=found.len()).contains(&n) => Ok(found.swap_remove(n - 1)),
         _ => anyhow::bail!("no folder chosen; pass one with --dota-dir"),
     }
+}
+
+fn ensure_dota_closed() -> Result<()> {
+    if install::dota_running() {
+        anyhow::bail!(
+            "Dota 2 is running. Quit it first: it saves its settings on exit, and those are what this reads."
+        );
+    }
+    Ok(())
 }
 
 fn confirm(question: &str) -> Result<bool> {

@@ -13,14 +13,16 @@ use regex::Regex;
 
 use super::cfg::{self, CastingConfig};
 use super::gsi;
+use super::saved::{Saved, Snapshot};
 
 const BEGIN: &str = "// >>> servujatkot";
 const END: &str = "// <<< servujatkot";
 const BACKUP: &str = "autoexec.cfg.servujatkot-backup";
+const SNAPSHOT: &str = "servujatkot_snapshot.json";
 
 /// Steam roots to look in, most common first: native, the `~/.steam`
 /// symlinks, Flatpak and Snap.
-fn steam_roots(home: &Path) -> Vec<PathBuf> {
+pub fn steam_roots(home: &Path) -> Vec<PathBuf> {
     [
         ".local/share/Steam",
         ".steam/steam",
@@ -176,10 +178,16 @@ pub struct Write {
 
 #[derive(Default)]
 pub struct Plan {
+    /// Files read to build the plan, shown so the user can check them.
+    pub reads: Vec<PathBuf>,
     pub writes: Vec<Write>,
     /// Paths to delete (uninstall).
     pub removes: Vec<PathBuf>,
+    /// Directories to delete if empty once `removes` are gone.
+    pub remove_empty_dirs: Vec<PathBuf>,
     pub warnings: Vec<String>,
+    /// Shown after a successful apply.
+    pub after: Vec<String>,
 }
 
 /// The real file behind `cfg/autoexec.cfg`. People often symlink it to a
@@ -189,6 +197,25 @@ fn autoexec_target(dota_dir: &Path) -> PathBuf {
     link.canonicalize().unwrap_or(link)
 }
 
+/// True if a `dota2` process is running. Dota saves its settings on exit,
+/// so reading or comparing them while it runs gives stale answers.
+pub fn dota_running() -> bool {
+    let Ok(procs) = std::fs::read_dir("/proc") else {
+        return false;
+    };
+    procs
+        .flatten()
+        .any(|p| std::fs::read_to_string(p.path().join("comm")).is_ok_and(|c| c.trim() == "dota2"))
+}
+
+fn load_snapshot(dota_dir: &Path) -> Result<Option<Snapshot>> {
+    let text = read_if_exists(&cfg_dir(dota_dir).join(SNAPSHOT))?;
+    if text.is_empty() {
+        return Ok(None);
+    }
+    Snapshot::parse(&text).map(Some)
+}
+
 pub struct InstallOpts<'a> {
     pub cast_key: &'a str,
     pub play_key: &'a str,
@@ -196,9 +223,59 @@ pub struct InstallOpts<'a> {
     pub token: Option<&'a str>,
 }
 
-pub fn plan_install(dota_dir: &Path, config: &CastingConfig, o: &InstallOpts) -> Result<Plan> {
+/// `saved_dir` is Dota's userdata cfg directory (see [`saved`]); `None` if
+/// none was found, in which case only the TOML fallbacks can be restored.
+pub fn plan_install(
+    dota_dir: &Path,
+    saved_dir: Option<&Path>,
+    config: &CastingConfig,
+    o: &InstallOpts,
+) -> Result<Plan> {
     let dir = cfg_dir(dota_dir);
     let mut plan = Plan::default();
+
+    let existing = load_snapshot(dota_dir)?;
+    let first_install = existing.is_none();
+    let mut snap = existing.unwrap_or_default();
+    let saved = match saved_dir {
+        Some(d) => {
+            plan.reads.push(d.to_path_buf());
+            Saved::load(d)?
+        }
+        None => {
+            plan.warnings.push(
+                "found no Dota settings under Steam userdata; F9 can only restore casting.toml's `play` values."
+                    .into(),
+            );
+            Saved::default()
+        }
+    };
+    if first_install {
+        snap.source = saved_dir.map(Path::to_path_buf);
+    }
+    for k in [o.cast_key, o.play_key] {
+        if !snap.switch_keys.iter().any(|s| s.eq_ignore_ascii_case(k)) {
+            snap.switch_keys.push(k.to_uppercase());
+        }
+    }
+    let unrestorable = snap.extend(config, &[o.cast_key, o.play_key], &saved);
+    if !unrestorable.is_empty() {
+        plan.warnings.push(format!(
+            "no saved value or `play` fallback for {}; these stay at their casting values after F9.",
+            unrestorable.join(", ")
+        ));
+    }
+    if !first_install {
+        plan.warnings.push(
+            "keeping the existing snapshot of your settings; only settings new to casting.toml were recorded now."
+                .into(),
+        );
+    }
+    plan.writes.push(Write {
+        path: dir.join(SNAPSHOT),
+        body: snap.to_json(),
+        why: "your current settings, restored by F9 and checked by uninstall",
+    });
     plan.writes.push(Write {
         path: dir.join(cfg::CAST_FILE),
         body: config.render_cast(),
@@ -206,7 +283,7 @@ pub fn plan_install(dota_dir: &Path, config: &CastingConfig, o: &InstallOpts) ->
     });
     plan.writes.push(Write {
         path: dir.join(cfg::PLAY_FILE),
-        body: config.render_play(),
+        body: config.render_play(&snap),
         why: "playing config",
     });
     plan.writes.push(Write {
@@ -257,17 +334,64 @@ pub fn plan_install(dota_dir: &Path, config: &CastingConfig, o: &InstallOpts) ->
     Ok(plan)
 }
 
-pub fn plan_uninstall(dota_dir: &Path) -> Result<Plan> {
+/// Removes our files and autoexec block. Refuses (unless `force`) while
+/// Dota's saved settings still differ from the snapshot, because once our
+/// files are gone nothing can put them back.
+pub fn plan_uninstall(dota_dir: &Path, saved_dir: Option<&Path>, force: bool) -> Result<Plan> {
     let dir = cfg_dir(dota_dir);
     let mut plan = Plan::default();
+    let snap = load_snapshot(dota_dir)?;
+
+    if let (Some(snap), Some(saved_dir)) = (&snap, saved_dir) {
+        plan.reads.push(saved_dir.to_path_buf());
+        let switch: Vec<&str> = snap.switch_keys.iter().map(String::as_str).collect();
+        let diffs = snap.differences(&Saved::load(saved_dir)?, &switch);
+        if !diffs.is_empty() {
+            let list = diffs.join("\n  ");
+            if !force {
+                bail!(
+                    "Dota still has casting settings saved:\n  {list}\n\n\
+                     Start Dota, press {} (playing), quit Dota, then uninstall again. \
+                     --force uninstalls anyway and leaves these as they are.",
+                    snap.switch_keys
+                        .get(1)
+                        .map_or("the play key", String::as_str)
+                );
+            }
+            plan.warnings
+                .push(format!("--force: these stay as they are:\n  {list}"));
+        }
+        // F9 can't restore the switch keys themselves; Dota keeps them saved.
+        let cmds: Vec<String> = snap
+            .switch_keys
+            .iter()
+            .map(|k| match snap.binds.get(k).cloned().flatten() {
+                Some(cmd) => format!("bind \"{k}\" \"{cmd}\""),
+                None => format!("unbind \"{k}\""),
+            })
+            .collect();
+        plan.after.push(format!(
+            "Dota keeps the switch keys bound until you change them. To put them back, run in the Dota console:\n  {}",
+            cmds.join("; ")
+        ));
+    } else if snap.is_none() {
+        plan.warnings
+            .push("no snapshot found, so there is nothing to check your settings against.".into());
+    }
+
     for p in [
         dir.join(cfg::CAST_FILE),
         dir.join(cfg::PLAY_FILE),
+        dir.join(SNAPSHOT),
+        dir.join(BACKUP),
         gsi_path(dota_dir),
     ] {
         if p.exists() {
             plan.removes.push(p);
         }
+    }
+    if let Some(gsi_dir) = gsi_path(dota_dir).parent() {
+        plan.remove_empty_dirs.push(gsi_dir.to_path_buf());
     }
     let autoexec = autoexec_target(dota_dir);
     if let Some(updated) = remove_block(&read_if_exists(&autoexec)?) {
@@ -289,8 +413,15 @@ fn read_if_exists(path: &Path) -> Result<String> {
 }
 
 impl Plan {
+    pub fn is_empty(&self) -> bool {
+        self.writes.is_empty() && self.removes.is_empty()
+    }
+
     pub fn describe(&self) -> String {
         let mut out = String::new();
+        for r in &self.reads {
+            out += &format!("read    {}  (Dota's saved settings)\n", r.display());
+        }
         for w in &self.writes {
             out += &format!("write   {}  ({})\n", w.path.display(), w.why);
         }
@@ -315,6 +446,10 @@ impl Plan {
         }
         for p in &self.removes {
             std::fs::remove_file(p).with_context(|| format!("removing {}", p.display()))?;
+        }
+        for d in &self.remove_empty_dirs {
+            // Fails if not empty or already gone; both are fine.
+            let _ = std::fs::remove_dir(d);
         }
         Ok(())
     }
@@ -408,7 +543,7 @@ mod tests {
         std::os::unix::fs::symlink(&dotfiles, &link).unwrap();
 
         let config = CastingConfig::parse(cfg::DEFAULT_TOML).unwrap();
-        let plan = plan_install(&dota, &config, &opts()).unwrap();
+        let plan = plan_install(&dota, None, &config, &opts()).unwrap();
         assert!(plan.warnings.iter().any(|w| w.contains("F11")));
         assert!(plan.warnings.iter().any(|w| w.contains("is a symlink")));
         plan.apply().unwrap();
@@ -427,7 +562,7 @@ mod tests {
         assert!(cfg_dir(&dota).join(cfg::CAST_FILE).exists());
 
         // Reinstalling changes nothing in autoexec and makes no new backup.
-        let again = plan_install(&dota, &config, &opts()).unwrap();
+        let again = plan_install(&dota, None, &config, &opts()).unwrap();
         assert!(
             !again
                 .writes
@@ -435,9 +570,60 @@ mod tests {
                 .any(|w| w.path == dotfiles.canonicalize().unwrap())
         );
 
-        plan_uninstall(&dota).unwrap().apply().unwrap();
+        plan_uninstall(&dota, None, false).unwrap().apply().unwrap();
         assert_eq!(std::fs::read_to_string(&dotfiles).unwrap(), original);
         assert!(!gsi_path(&dota).exists());
         assert!(!cfg_dir(&dota).join(cfg::CAST_FILE).exists());
+        assert!(!cfg_dir(&dota).join(SNAPSHOT).exists());
+        assert!(!cfg_dir(&dota).join(BACKUP).exists());
+        assert!(!cfg_dir(&dota).join("gamestate_integration").exists());
+    }
+
+    /// Install snapshots the real values; F9 restores them; uninstall refuses
+    /// until Dota has saved them back.
+    #[test]
+    fn snapshot_drives_play_cfg_and_guards_uninstall() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dota = fake_dota(tmp.path());
+        let saved = tmp.path().join("userdata/1/570/local/cfg");
+        std::fs::create_dir_all(&saved).unwrap();
+        let convars = |speed: &str| {
+            format!(
+                "\"config\"\n{{\n\t\"convars\"\n\t{{\n\t\t\"fps_max\"\t\t\"300\"\n\t\t\"dota_camera_speed\"\t\t\"{speed}\"\n\t}}\n}}\n"
+            )
+        };
+        std::fs::write(saved.join("user_convars_0_slot0.vcfg"), convars("6000")).unwrap();
+        std::fs::write(
+            saved.join("user_keys_0_slot0.vcfg"),
+            "\"config\"\n{\n\t\"bindings\"\n\t{\n\t\t\"SPACE\"\t\t\"+camhold\"\n\t}\n}\n",
+        )
+        .unwrap();
+
+        let config = CastingConfig::parse(cfg::DEFAULT_TOML).unwrap();
+        plan_install(&dota, Some(&saved), &config, &opts())
+            .unwrap()
+            .apply()
+            .unwrap();
+        let play = std::fs::read_to_string(cfg_dir(&dota).join(cfg::PLAY_FILE)).unwrap();
+        assert!(
+            play.contains("fps_max \"300\""),
+            "user's value, not the TOML's 240"
+        );
+        assert!(play.contains("bind \"SPACE\" \"+camhold\""));
+        assert!(play.contains("unbind \"MOUSE4\""), "was unbound before");
+
+        // Dota saved the casting camera speed: uninstall must refuse.
+        std::fs::write(saved.join("user_convars_0_slot0.vcfg"), convars("3000")).unwrap();
+        let err = plan_uninstall(&dota, Some(&saved), false)
+            .err()
+            .unwrap()
+            .to_string();
+        assert!(err.contains("dota_camera_speed is 3000, was 6000"), "{err}");
+        assert!(plan_uninstall(&dota, Some(&saved), true).is_ok());
+
+        // Back to playing values: uninstall goes through and explains F11/F9.
+        std::fs::write(saved.join("user_convars_0_slot0.vcfg"), convars("6000")).unwrap();
+        let plan = plan_uninstall(&dota, Some(&saved), false).unwrap();
+        assert!(plan.after[0].contains("unbind \"F11\""));
     }
 }

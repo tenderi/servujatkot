@@ -37,12 +37,25 @@ It writes:
   the first time. If `autoexec.cfg` is a symlink, the file it points to is
   edited in place and the link stays; the install output names that file.
 
-It warns if your autoexec already binds the same keys. `servujatkot dota uninstall`
-removes everything above. Restart Dota after either.
+It warns if your autoexec already binds the same keys. Quit Dota before running
+it: Dota saves its settings when it exits, and the installer reads them.
 
-Review the `play` values in [`configs/dota/casting.toml`](configs/dota/casting.toml)
-first: they're what you get back when you switch to playing. To change the
-config, copy the TOML, edit it, and pass `--config yours.toml`.
+**Getting your own settings back.** Dota saves every setting and bind changed
+from the console under `~/.local/share/Steam/userdata/<account>/570/local/cfg/`,
+so casting values outlive the session. Before the first install, `servujatkot`
+records your current value for every setting and key the cast config touches,
+in `servujatkot_snapshot.json`. That record is never overwritten. **F9 restores
+exactly those values.** A setting Dota never saved (still at its default) falls
+back to the `play` value in [`configs/dota/casting.toml`](configs/dota/casting.toml).
+Settings with neither are named at install; they keep their casting values after F9.
+
+`servujatkot dota uninstall` removes everything above, including the snapshot
+and the autoexec backup, and removes the autoexec block exactly. It **refuses
+while Dota still has casting values saved**: start Dota, press F9, quit, then
+run it again (`--force` overrides). The F11/F9 binds stay saved in Dota, and the
+uninstall output gives the console line that puts them back.
+
+To change the config, copy the TOML, edit it, and pass `--config yours.toml`.
 `servujatkot dota cfg [--play]` prints a generated cfg without installing it.
 
 **Checking it against the current client.** Add `-condebug` to Dota's launch
